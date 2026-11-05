@@ -1,5 +1,6 @@
 // Command saf runs SAF, the stock control app of the UNILAB university pharmacy.
 //
+//	SAF.exe / SAF.app                  the desktop app (desktop build, see desktop.go)
 //	saf serve                          development: SAF in the browser at http://127.0.0.1:8080
 //	saf create-admin <login> "<nome>"  add an administrator and print a first password
 //	saf keygen                         print a new encryption key for SAF_KEY_FILE
@@ -34,6 +35,14 @@ const usage = `uso:
   saf keygen`
 
 func main() {
+	if len(os.Args) == 1 && desktopBuild { // a double-click on SAF.exe or SAF.app
+		if err := desktop(); err != nil {
+			showError(err)
+			os.Exit(1)
+		}
+		return
+	}
+	attachConsole()
 	var err error
 	switch {
 	case len(os.Args) == 2 && os.Args[1] == "serve":
@@ -69,7 +78,7 @@ func openStore(dir string) (*sql.DB, error) {
 // serve runs SAF for development: plain HTTP, reachable from this computer only.
 func serve() error {
 	// Refuse to start without the key rather than run unable to read or write patient data.
-	box, err := seal.LoadKey(os.Getenv("SAF_KEY_FILE"))
+	box, keyText, err := seal.LoadKey(os.Getenv("SAF_KEY_FILE"))
 	if err != nil {
 		return err
 	}
@@ -82,7 +91,7 @@ func serve() error {
 		return err
 	}
 
-	inventory, handler := app(store, box, filepath.Join(dataDir(), "photos"), "")
+	inventory, handler := app(store, box, keyText, filepath.Join(dataDir(), "photos"), "")
 	listener, err := net.Listen("tcp", "127.0.0.1:8080")
 	if err != nil {
 		return err
@@ -100,13 +109,15 @@ func firstRun(store *sql.DB) error {
 	return err
 }
 
-// app wires SAF together on an open database.
-func app(store *sql.DB, box *seal.Box, photoDir, domain string) (*stock.Inventory, http.Handler) {
+// app wires SAF together on an open database. keyText is the key as saved in its file (the setup
+// page shows it to be printed); domain is the only Host accepted, or "" for any.
+func app(store *sql.DB, box *seal.Box, keyText, photoDir, domain string) (*stock.Inventory, http.Handler) {
 	inventory := stock.NewInventory(store, box, photoDir)
 	return inventory, web.Handler(web.Config{
 		Accounts:  auth.NewAccounts(store, auth.HashCost),
 		Inventory: inventory,
 		Domain:    domain,
+		KeyText:   keyText,
 	})
 }
 

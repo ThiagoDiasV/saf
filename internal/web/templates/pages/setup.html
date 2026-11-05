@@ -6,6 +6,13 @@
       <h1>Configure o administrador</h1>
       <p class="hint">O login <strong>admin</strong> serve só para este primeiro acesso e deixa de funcionar depois dele. Informe os dados de quem vai administrar o SAF.</p>
     </div>
+    <section class="key-box" aria-labelledby="key-title">
+      <p class="key-print-title">SAF · Farmácia UNILAB</p>
+      <h2 id="key-title">{{icon "key"}}Chave de segurança</h2>
+      <p class="key-text">{{.Page.Key}}</p>
+      <p class="hint">Sem esta chave, os nomes e as fotos de um backup não podem ser lidos. Imprima e guarde a folha longe deste computador. Não a envie por e-mail nem a salve no Drive.</p>
+      <button type="button" class="btn" data-print>{{icon "printer"}}Imprimir</button>
+    </section>
     <div class="stack-lg">
       <label class="field"><span>Nome</span>
         <input name="name" value="{{.Page.Name}}" autocomplete="name" autofocus{{if .Errors.name}} aria-invalid="true"{{end}}>
@@ -25,6 +32,10 @@
         <input name="confirm" type="password" autocomplete="new-password"{{if .Errors.confirm}} aria-invalid="true"{{end}}>
         {{- with .Errors.confirm}}<span class="field-error">{{icon "alert"}}{{.}}</span>{{end}}
       </label>
+      <div class="field">
+        <label class="check"><input type="checkbox" name="key_saved" value="1"{{if .Errors.key_saved}} aria-invalid="true"{{end}}> Imprimi a chave e guardei a folha</label>
+        {{- with .Errors.key_saved}}<span class="field-error">{{icon "alert"}}{{.}}</span>{{end}}
+      </div>
       <button class="btn btn-primary btn-block" type="submit">{{icon "check"}}Salvar e entrar</button>
     </div>
   </form>

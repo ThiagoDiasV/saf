@@ -39,6 +39,9 @@ type Config struct {
 	// Domain, when set, is the only Host accepted: the desktop app passes 127.0.0.1, so a web page
 	// that points its own name at this computer (DNS rebinding) gets nothing. Empty in development.
 	Domain string
+	// KeyText is the encryption key as saved in its file. The setup page shows it so the pharmacy
+	// prints it: without it, the names and photos in a backup can't be read.
+	KeyText string
 	// Now is the clock; nil means time.Now. Tests move it to expire sessions and rate limits.
 	Now func() time.Time
 }
@@ -47,6 +50,7 @@ type server struct {
 	accounts      *auth.Accounts
 	inventory     *stock.Inventory
 	now           func() time.Time
+	keyText       string
 	pages         map[string]*template.Template
 	fragments     *template.Template // the partials alone, for HTML the browser fetches into a page
 	staticVersion string
@@ -102,6 +106,7 @@ func Handler(cfg Config) http.Handler {
 		accounts:      cfg.Accounts,
 		inventory:     cfg.Inventory,
 		now:           cfg.Now,
+		keyText:       cfg.KeyText,
 		staticVersion: contentHash(static),
 		local:         stock.TimeZone,
 	}

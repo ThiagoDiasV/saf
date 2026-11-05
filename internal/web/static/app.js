@@ -54,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
       passwordToggle.setAttribute('aria-pressed', String(show));
       passwordToggle.setAttribute('aria-label', show ? 'Esconder senha' : 'Mostrar senha');
     }
+    if (event.target.closest('[data-print]')) window.print();
   });
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape') closeMenus();

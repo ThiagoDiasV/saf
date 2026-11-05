@@ -324,6 +324,19 @@ dialog.photo-viewer { width: min(960px, calc(100% - 32px)); }
 .login-card { width: min(400px, 100%); }
 .brand-block { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 24px; text-align: center; }
 .brand-block .brand-mark { color: var(--accent); font-size: .875rem; }
+.key-box { display: grid; gap: 10px; padding: 16px; margin-bottom: 20px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-2); }
+.key-box h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 1rem; }
+.key-text { font: 600 1.0625rem/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace; overflow-wrap: anywhere; user-select: all; }
+.key-print-title { display: none; }
+
+/* Printing the setup page prints the key alone. */
+@media print {
+  body * { visibility: hidden; }
+  .key-box, .key-box * { visibility: visible; }
+  .key-box { position: absolute; inset: 0 0 auto 0; border: 0; background: none; }
+  .key-box .btn { display: none; }
+  .key-print-title { display: block; }
+}
 
 /* ---------- Phone width ---------- */
 @container app (max-width: 760px) {

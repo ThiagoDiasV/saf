@@ -32,20 +32,25 @@ func NewKey() string {
 	return base64.StdEncoding.EncodeToString(key)
 }
 
-// LoadKey reads a key file written from NewKey and returns its Box.
-func LoadKey(path string) (*Box, error) {
+// LoadKey reads a key file written from NewKey and returns its Box, and the key as written in
+// the file, for the pharmacy to print.
+//
+//	box, text, err := seal.LoadKey("chave.key")
+func LoadKey(path string) (*Box, string, error) {
 	if path == "" {
-		return nil, errors.New("SAF_KEY_FILE is not set: create a key with `saf keygen` and point SAF_KEY_FILE at it")
+		return nil, "", errors.New("SAF_KEY_FILE is not set: create a key with `saf keygen` and point SAF_KEY_FILE at it")
 	}
-	text, err := os.ReadFile(path)
+	raw, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("read key file: %w", err)
+		return nil, "", fmt.Errorf("read key file: %w", err)
 	}
-	key, err := base64.StdEncoding.DecodeString(strings.TrimSpace(string(text)))
+	text := strings.TrimSpace(string(raw))
+	key, err := base64.StdEncoding.DecodeString(text)
 	if err != nil || len(key) != keySize {
-		return nil, fmt.Errorf("key file %s must hold %d random bytes in base64, as `saf keygen` prints", path, keySize)
+		return nil, "", fmt.Errorf("key file %s must hold %d random bytes in base64, as `saf keygen` prints", path, keySize)
 	}
-	return New(key)
+	box, err := New(key)
+	return box, text, err
 }
 
 // New returns a Box for a 32-byte key.

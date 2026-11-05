@@ -4,11 +4,12 @@ GOVULNCHECK := golang.org/x/vuln/cmd/govulncheck@v1.9.0
 # Dependabot does not update this pin; bump it by hand.
 TRIVY_IMAGE := aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
 
-.PHONY: check run smoke scan
+.PHONY: check run smoke scan windows mac
 
 check:
 	@unformatted="$$(gofmt -l .)"; if [ -n "$$unformatted" ]; then echo "gofmt needed:"; echo "$$unformatted"; exit 1; fi
 	go vet ./...
+	GOOS=windows go vet -tags desktop,production ./cmd/saf
 	go run $(STATICCHECK) ./...
 	go run $(GOVULNCHECK) ./...
 	go test -race ./...
@@ -26,9 +27,23 @@ smoke:
 	node test/browser/smoke.mjs
 
 # Mandatory gate (docs/PLAN.md §3): Trivy reads the library versions built into the Windows
-# executable and fails on HIGH/CRITICAL findings that have a fix. Needs Docker.
+# desktop app and fails on HIGH/CRITICAL findings that have a fix. Needs Docker.
 scan:
-	mkdir -p dist/scan
-	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -o dist/scan/saf.exe ./cmd/saf
+	build/windows.sh dist/scan/SAF.exe
 	docker run --rm -v "$(CURDIR)/dist/scan:/scan:ro" -v saf-trivy-cache:/root/.cache $(TRIVY_IMAGE) \
 		rootfs --no-progress --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed /scan
+
+# The desktop app for the pharmacy's PC: dist/SAF-windows.zip holds the folder SAF with SAF.exe.
+# Unzipped to C:\, SAF keeps its key and data next to it in C:\SAF.
+windows:
+	build/windows.sh dist/SAF/SAF.exe
+	cd dist && rm -f SAF-windows.zip && zip -qr SAF-windows.zip SAF/SAF.exe
+
+# The same app for an Apple Silicon Mac, to check builds (needs Xcode's Command Line Tools).
+# Its key and data go next to it, in dist/.
+mac:
+	mkdir -p dist/SAF.app/Contents/MacOS dist/SAF.app/Contents/Resources
+	CGO_ENABLED=1 CGO_LDFLAGS="-framework UniformTypeIdentifiers" go build -tags desktop,production -trimpath \
+		-ldflags="-s -w" -o dist/SAF.app/Contents/MacOS/SAF ./cmd/saf
+	cp build/darwin/Info.plist dist/SAF.app/Contents/
+	cp build/darwin/icon.icns dist/SAF.app/Contents/Resources/

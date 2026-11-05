@@ -25,6 +25,9 @@ var t0 = time.Date(2026, 10, 7, 15, 0, 0, 0, time.UTC) // 12:00 in Fortaleza
 
 const testPassword = "farmacia-2026!"
 
+// testKeyText stands in for the key file's text the setup page shows. Its value is never decoded.
+const testKeyText = "Q2hhdmUgZGUgdGVzdGUsIG7Do28gZGUgdmVyZGFkZS4="
+
 // testApp is the whole web stack on a real SQLite database in a temp dir, with a clock the
 // test can move.
 type testApp struct {
@@ -44,7 +47,7 @@ func newTestApp(t *testing.T, domain string) *testApp {
 	require.NoError(t, err)
 	app := &testApp{conn: conn, accounts: auth.NewAccounts(conn, bcrypt.MinCost), inventory: stock.NewInventory(conn, box, t.TempDir()), now: t0}
 	app.handler = Handler(Config{Accounts: app.accounts, Inventory: app.inventory, Domain: domain,
-		Now: func() time.Time { return app.now }})
+		KeyText: testKeyText, Now: func() time.Time { return app.now }})
 	return app
 }
 
@@ -315,15 +318,23 @@ func TestFirstRunAdminMustSetUpBeforeAnythingElse(t *testing.T) {
 	for _, path := range []string{"/estoque", "/usuarios", "/entrada", "/minha-senha"} {
 		assert.Equal(t, "/configurar", app.get(path, setup).Header().Get("Location"), path)
 	}
-	assert.Contains(t, app.get("/configurar", setup).Body.String(), "Configure o administrador")
+	page := app.get("/configurar", setup).Body.String()
+	assert.Contains(t, page, "Configure o administrador")
+	assert.Contains(t, page, testKeyText, "the key to print")
 
-	res = app.post("/configurar", url.Values{"name": {"Paulo Mendes"}, "login": {"admin"}, "password": {"curta"}, "confirm": {"curta"}}, setup)
+	valid := url.Values{"name": {"Paulo Mendes"}, "login": {"paulo.mendes"}, "password": {"nova-senha-segura"}, "confirm": {"nova-senha-segura"}}
+	res = app.post("/configurar", valid, setup)
+	assert.Equal(t, http.StatusUnprocessableEntity, res.Code, "not before the key is printed")
+	assert.Contains(t, res.Body.String(), "Imprima a chave, guarde a folha e marque aqui.")
+	assert.Contains(t, res.Body.String(), testKeyText)
+
+	res = app.post("/configurar", url.Values{"name": {"Paulo Mendes"}, "login": {"admin"}, "password": {"curta"}, "confirm": {"curta"}, "key_saved": {"1"}}, setup)
 	assert.Equal(t, http.StatusUnprocessableEntity, res.Code)
 	assert.Contains(t, res.Body.String(), "Este login é reservado. Escolha outro.")
 	assert.Contains(t, res.Body.String(), `value="Paulo Mendes"`, "the name is kept")
 
-	res = app.post("/configurar", url.Values{"name": {"Paulo Mendes"}, "login": {"paulo.mendes"},
-		"password": {"nova-senha-segura"}, "confirm": {"nova-senha-segura"}}, setup)
+	valid.Set("key_saved", "1")
+	res = app.post("/configurar", valid, setup)
 	require.Equal(t, http.StatusSeeOther, res.Code, res.Body.String())
 	assert.Equal(t, "/estoque", res.Header().Get("Location"))
 	fresh := cookieNamed(res, sessionCookie)

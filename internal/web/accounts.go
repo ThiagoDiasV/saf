@@ -58,8 +58,10 @@ func (s *server) login(w http.ResponseWriter, r *http.Request) {
 // setupPath is where the first-run administrator (auth.SetupLogin) becomes the real one.
 const setupPath = "/configurar"
 
-// setupValues refills "Configure o administrador" after an error. Passwords never come back.
-type setupValues struct {
+// setupView is "Configure o administrador": the key to print, and the form refilled after an
+// error. Passwords never come back.
+type setupView struct {
+	Key   string
 	Name  string
 	Login string
 }
@@ -70,7 +72,7 @@ func (s *server) setupPage(w http.ResponseWriter, r *http.Request, user auth.Use
 		return
 	}
 	// No User in pageData: the page shows without tabs or menu, like the login.
-	s.render(w, r, http.StatusOK, "setup.html", pageData{Title: "Configure o administrador", Page: setupValues{}})
+	s.render(w, r, http.StatusOK, "setup.html", pageData{Title: "Configure o administrador", Page: setupView{Key: s.keyText}})
 }
 
 func (s *server) completeSetup(w http.ResponseWriter, r *http.Request, user auth.User) {
@@ -84,11 +86,15 @@ func (s *server) completeSetup(w http.ResponseWriter, r *http.Request, user auth
 		Password: r.PostForm.Get("password"),
 		Confirm:  r.PostForm.Get("confirm"),
 	}
-	err := s.accounts.CompleteSetup(r.Context(), user.ID, in)
+	// The key's only copy outside this PC is the printout: setup waits until it exists.
+	err := error(form.Errors{"key_saved": "Imprima a chave, guarde a folha e marque aqui."})
+	if r.PostForm.Get("key_saved") == "1" {
+		err = s.accounts.CompleteSetup(r.Context(), user.ID, in)
+	}
 	var errs form.Errors
 	if errors.As(err, &errs) {
 		s.render(w, r, http.StatusUnprocessableEntity, "setup.html", pageData{
-			Title: "Configure o administrador", Errors: errs, Page: setupValues{Name: in.Name, Login: in.Login},
+			Title: "Configure o administrador", Errors: errs, Page: setupView{Key: s.keyText, Name: in.Name, Login: in.Login},
 		})
 		return
 	}

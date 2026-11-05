@@ -8,3 +8,5 @@
 .DS_Store
 /saf
 /dist/
+# Made by build/windows.sh (icon and manifest for SAF.exe).
+/cmd/saf/rsrc_windows_*.syso

@@ -2,7 +2,7 @@
 // Chrome over the DevTools protocol. Needs Node 23+ (built-in fetch and WebSocket) and Google Chrome;
 // no npm packages. Run with `make smoke`; set SHOTS=<dir> to also save screenshots. Not in CI.
 import { spawn, execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -124,11 +124,22 @@ try {
   await login('admin', 'primeiro-acesso');
   check('the first login asks for the real administrator',
     await js(`return location.pathname === '/configurar' && !document.querySelector('.tabs')`));
+  check('the setup page shows the key to print', await text('.key-text') === readFileSync(keyFile, 'utf8').trim());
   await shot('01-primeiro-acesso');
+  await send('Emulation.setEmulatedMedia', { media: 'print' });
+  const printed = await js(`const shown = s => getComputedStyle(document.querySelector(s)).visibility === 'visible';
+    return { key: shown('.key-text'), title: getComputedStyle(document.querySelector('.key-print-title')).display !== 'none',
+      form: shown('[name=name]'), header: shown('.app-header') }`);
+  check('printing shows the key alone', printed.key && printed.title && !printed.form && !printed.header, printed);
+  await send('Emulation.setEmulatedMedia', { media: '', features: [{ name: 'prefers-color-scheme', value: 'light' }] });
   await navigating(`const f = document.querySelector('form[action="/configurar"]');
     f.name.value = 'Paulo Mendes'; f.login.value = 'paulo.mendes';
     f.password.value = ${JSON.stringify(ADMIN_PASSWORD)}; f.confirm.value = ${JSON.stringify(ADMIN_PASSWORD)};
     f.requestSubmit(); return 1`);
+  check('setup waits until the key is printed', await text('.field-error') === 'Imprima a chave, guarde a folha e marque aqui.');
+  await navigating(`const f = document.querySelector('form[action="/configurar"]');
+    f.password.value = ${JSON.stringify(ADMIN_PASSWORD)}; f.confirm.value = ${JSON.stringify(ADMIN_PASSWORD)};
+    f.key_saved.checked = true; f.requestSubmit(); return 1`);
   check('admin lands on Estoque', await js(`return location.pathname`) === '/estoque');
   check('header shows the user', await text('.user-name') === 'Paulo Mendes');
   check('admin sees six tabs', await js(`return document.querySelectorAll('.tabs .tab').length`) === 6);
