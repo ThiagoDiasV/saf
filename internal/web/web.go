@@ -128,7 +128,7 @@ func Handler(cfg Config) http.Handler {
 	s.pages, s.fragments = s.parsePages()
 
 	mux := http.NewServeMux()
-	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(static)))
+	mux.Handle("GET /static/", http.StripPrefix("/static/", staticTypes(http.FileServerFS(static))))
 	mux.Handle("GET /{$}", http.RedirectHandler("/estoque", http.StatusSeeOther))
 	mux.HandleFunc("GET /login", s.loginPage)
 	mux.Handle("POST /login", newRateLimiter(10, time.Minute, s.now).wrap(http.HandlerFunc(s.login)))
@@ -177,6 +177,23 @@ func Handler(cfg Config) http.Handler {
 	h = checkHost(cfg.Domain, h)
 	h = newRateLimiter(300, time.Minute, s.now).wrap(h)
 	return securityHeaders(h)
+}
+
+// staticTypes sets the Content-Type of SAF's static files itself. Go otherwise takes it from the
+// Windows registry, which other programs change (.js as text/plain is a common one), and with
+// nosniff a wrong type stops the window from running app.js.
+func staticTypes(files http.Handler) http.Handler {
+	types := map[string]string{
+		".css": "text/css; charset=utf-8",
+		".js":  "text/javascript; charset=utf-8",
+		".svg": "image/svg+xml",
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if t, ok := types[path.Ext(r.URL.Path)]; ok {
+			w.Header().Set("Content-Type", t)
+		}
+		files.ServeHTTP(w, r)
+	})
 }
 
 // parsePages gives every file in templates/pages its own copy of the layout and the shared

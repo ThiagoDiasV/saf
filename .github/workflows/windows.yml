@@ -42,18 +42,19 @@ jobs:
 
           $saf = Start-Process -FilePath .\dist\SAF\SAF.exe -PassThru
           try {
+          # SAF's port is random and only its window knows it, so any connection to it, open or
+          # already closed (TimeWait), is the window reaching SAF.
           $peers = @()
           foreach ($i in 1..90) { # WebView2's first start on a fresh machine can be slow
             Start-Sleep -Seconds 1
             if ($saf.HasExited) { throw "SAF.exe exited with code $($saf.ExitCode)" }
             $port = (Get-NetTCPConnection -OwningProcess $saf.Id -State Listen -ErrorAction SilentlyContinue).LocalPort
             if (-not $port) { continue }
-            $peers = @(Get-NetTCPConnection -RemotePort $port -State Established -ErrorAction SilentlyContinue |
-              ForEach-Object { (Get-Process -Id $_.OwningProcess).ProcessName })
-            if ($peers -contains 'msedgewebview2') { break }
+            $peers = @(Get-NetTCPConnection -RemotePort $port -ErrorAction SilentlyContinue)
+            if ($peers.Count -gt 0) { break }
           }
-          "SAF listens on 127.0.0.1:$port; connected: $($peers -join ', ')"
-          if (-not ($peers -contains 'msedgewebview2')) { throw "the SAF window did not reach SAF" }
+          "SAF listens on 127.0.0.1:$port; connections: $(($peers | ForEach-Object { $_.State }) -join ', ')"
+          if ($peers.Count -eq 0) { throw "the SAF window did not reach SAF" }
           if (-not (Test-Path .\dist\SAF\chave.key)) { throw "no chave.key next to SAF.exe" }
           if (-not (Test-Path .\dist\SAF\dados\saf.db)) { throw "no dados\saf.db next to SAF.exe" }
 

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -23,9 +24,11 @@ func TestKeygenThenSignMakesAReleaseSAFTrusts(t *testing.T) {
 	require.NoError(t, keygen(keyFile, &stdout))
 	public, err := base64.StdEncoding.DecodeString(strings.TrimSpace(stdout.String()))
 	require.NoError(t, err)
-	info, err := os.Stat(keyFile)
-	require.NoError(t, err)
-	assert.Equal(t, os.FileMode(0o600), info.Mode().Perm(), "only its owner reads the private key")
+	if runtime.GOOS != "windows" { // Windows has no such permission bits; the user profile guards it
+		info, err := os.Stat(keyFile)
+		require.NoError(t, err)
+		assert.Equal(t, os.FileMode(0o600), info.Mode().Perm(), "only its owner reads the private key")
+	}
 	private, err := os.ReadFile(keyFile)
 	require.NoError(t, err)
 	assert.NotContains(t, stdout.String(), strings.TrimSpace(string(private)), "the private key is never printed")
