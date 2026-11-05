@@ -64,7 +64,7 @@ func (r *releases) publish(t *testing.T, version, exe string) Manifest {
 }
 
 func (r *releases) source() Source {
-	return Source{BaseURL: r.server.URL, Key: r.key.Public().(ed25519.PublicKey), Client: r.server.Client()}
+	return Source{BaseURL: r.server.URL, Manifest: "latest.json", Key: r.key.Public().(ed25519.PublicKey), Client: r.server.Client()}
 }
 
 // runningExe is a stand-in for the SAF.exe that is running, in its own folder.
@@ -82,10 +82,16 @@ func readFile(t *testing.T, path string) string {
 	return string(b)
 }
 
-func TestReleaseKeyIsAPublicKey(t *testing.T) {
-	_, err := GitHub()
+func TestGitHubHasReleasesForWindowsAndTheMac(t *testing.T) {
+	windows, err := GitHub("windows")
+	require.NoError(t, err, "a release built with this ReleaseKey could never update")
+	assert.Equal(t, "latest.json", windows.Manifest, "the name the first releases use")
+	mac, err := GitHub("darwin")
+	require.NoError(t, err)
+	assert.Equal(t, "latest-mac.json", mac.Manifest)
 
-	assert.NoError(t, err, "a release built with this key could never update")
+	_, err = GitHub("linux")
+	assert.ErrorContains(t, err, "no releases for linux")
 }
 
 func TestParseVersion(t *testing.T) {
@@ -129,13 +135,27 @@ func TestInstallSwapsTheProgramAndKeepsThePrevious(t *testing.T) {
 	r := newReleases(t)
 	m := r.publish(t, "1.3.0", "SAF 1.3.0")
 	exe := runningExe(t, "SAF 1.2.0")
-	require.NoError(t, os.WriteFile(filepath.Join(filepath.Dir(exe), PreviousName), []byte("SAF 1.1.0"), 0o755))
+	previous := filepath.Join(filepath.Dir(exe), "SAF.anterior.exe")
+	require.NoError(t, os.WriteFile(previous, []byte("SAF 1.1.0"), 0o755))
 
 	require.NoError(t, r.source().Install(ctx, m, exe))
 
 	assert.Equal(t, "SAF 1.3.0", readFile(t, exe))
-	assert.Equal(t, "SAF 1.2.0", readFile(t, filepath.Join(filepath.Dir(exe), PreviousName)))
+	assert.Equal(t, "SAF 1.2.0", readFile(t, previous))
 	assert.NoFileExists(t, filepath.Join(filepath.Dir(exe), "SAF.novo.exe"))
+}
+
+func TestInstallOnTheMacKeepsThePreviousAsSAFAnterior(t *testing.T) {
+	r := newReleases(t)
+	m := r.publish(t, "1.3.0", "SAF 1.3.0")
+	exe := filepath.Join(t.TempDir(), "SAF") // inside SAF.app/Contents/MacOS
+	require.NoError(t, os.WriteFile(exe, []byte("SAF 1.2.0"), 0o755))
+
+	require.NoError(t, r.source().Install(ctx, m, exe))
+
+	assert.Equal(t, "SAF 1.3.0", readFile(t, exe))
+	assert.Equal(t, "SAF 1.2.0", readFile(t, filepath.Join(filepath.Dir(exe), "SAF.anterior")))
+	assert.Equal(t, filepath.Join(filepath.Dir(exe), "SAF.anterior"), PreviousPath(exe))
 }
 
 func TestInstallRefusesADownloadThatDoesNotMatch(t *testing.T) {
@@ -146,7 +166,7 @@ func TestInstallRefusesADownloadThatDoesNotMatch(t *testing.T) {
 
 	err := r.source().Install(ctx, m, exe)
 
-	assert.ErrorContains(t, err, "does not match latest.json")
+	assert.ErrorContains(t, err, "does not match the manifest")
 	assert.Equal(t, "SAF 1.2.0", readFile(t, exe), "the running version stays")
 	assert.NoFileExists(t, filepath.Join(filepath.Dir(exe), "SAF.novo.exe"))
 }

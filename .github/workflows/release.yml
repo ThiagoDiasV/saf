@@ -1,18 +1,40 @@
 name: release
 
-# A tag vX.Y.Z publishes SAF.exe as a GitHub release, with the latest.json the app's updater reads.
-# The job waits for approval in the "release" environment, which alone holds the signing key.
+# A tag vX.Y.Z publishes SAF.exe (and the Mac build, for checking releases) as a GitHub release,
+# with the signed manifests the app's updater reads. The release job waits for approval in the
+# "release" environment, which alone holds the signing key.
 on:
   push:
     tags: ["v[0-9]+.[0-9]+.[0-9]+"]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
+  # The Mac build needs cgo and a Mac. No secrets here.
+  mac:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - run: make mac VERSION="${GITHUB_REF_NAME#v}" && cp dist/SAF.app/Contents/MacOS/SAF dist/SAF-mac
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: SAF-mac
+          path: dist/SAF-mac
+          if-no-files-found: error
+
   release:
+    needs: mac
     runs-on: ubuntu-24.04
     environment: release
+    permissions:
+      contents: write
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -22,17 +44,26 @@ jobs:
         with:
           go-version-file: go.mod
       - run: make check
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: SAF-mac
+          path: dist/release
       # Builds with third-party tools (go-winres, Trivy): this step never sees the signing key.
-      - name: Build and scan SAF.exe
+      # Trivy scans both programs in dist/release.
+      - name: Build SAF.exe and scan both programs
         run: make release-exe VERSION="${GITHUB_REF_NAME#v}"
       # Only our own code (cmd/release, standard library) runs with the key.
-      - name: Sign latest.json
+      - name: Sign the manifests
         env:
           SAF_SIGNING_KEY: ${{ secrets.SAF_SIGNING_KEY }}
-        run: go run ./cmd/release sign "${GITHUB_REF_NAME#v}" dist/release/SAF.exe dist/release
+        run: |
+          go run ./cmd/release sign "${GITHUB_REF_NAME#v}" windows dist/release
+          go run ./cmd/release sign "${GITHUB_REF_NAME#v}" darwin dist/release
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: >-
           gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes --title "SAF ${GITHUB_REF_NAME#v}"
-          dist/release/SAF.exe dist/release/latest.json dist/release/latest.json.sig docs/LEIA-ME.txt
+          dist/release/SAF.exe dist/release/latest.json dist/release/latest.json.sig
+          dist/release/SAF-mac dist/release/latest-mac.json dist/release/latest-mac.json.sig
+          docs/LEIA-ME.txt

@@ -140,14 +140,14 @@ func backup(store *sql.DB, dataDir string) func(context.Context) error {
 	}
 }
 
-// newUpdates returns the updater for a release build on Windows. Development builds ("dev") and
-// the Mac build don't update themselves.
+// newUpdates returns the updater for a release build (Windows, or a Mac to check releases).
+// Development builds ("dev") don't update themselves.
 func newUpdates(exe string, restart func()) *update.Manager {
 	current, err := update.ParseVersion(version)
-	if err != nil || goruntime.GOOS != "windows" {
+	if err != nil {
 		return nil
 	}
-	source, err := update.GitHub()
+	source, err := update.GitHub(goruntime.GOOS)
 	if err != nil {
 		slog.Error("updates off", "err", err)
 		return nil

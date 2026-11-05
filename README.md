@@ -87,6 +87,10 @@ daily. It trusts it only if the signature matches `update.ReleaseKey`:
   the click. Use a major version when an update needs people to know about it.
 
 Never an older version. To roll back by hand: close SAF and rename `SAF.anterior.exe` to `SAF.exe`.
+
+Releases also carry `SAF-mac` and `latest-mac.json`, built on a macOS runner, to check releases on a
+Mac: `make mac VERSION=1.4.1` builds an app that updates itself the same way (its previous version
+stays as `SAF.anterior` inside `SAF.app`).
 A database migration is forward-only; its copy is in `dados/backups/pre-migration-NNN.db`.
 
 The signing key: `go run ./cmd/release keygen <file>` writes a new one and prints its public half,

@@ -335,7 +335,8 @@ to print and makes the real administrator (§1).
 build and Trivy scan of SAF.exe, signature of `latest.json`, GitHub release. SAF checks when its window opens
 and daily: patch and minor versions download, are checked and swapped in (`SAF.anterior.exe` kept for a manual
 rollback), running from the next start with a "Reiniciar agora" banner; a major version waits for an
-administrator's "Atualizar agora". Pipeline proven with v0.9.0.
+administrator's "Atualizar agora". Pipeline proven with v0.9.0. Releases also carry `SAF-mac` and
+`latest-mac.json` (built on a macOS runner), so a Mac build can check the update flow by hand.
 
 | Item | Cost |
 |---|---|

@@ -45,12 +45,12 @@ windows:
 	cp docs/LEIA-ME.txt dist/SAF/
 	cd dist && rm -f SAF-windows.zip && zip -qr SAF-windows.zip SAF/SAF.exe SAF/LEIA-ME.txt
 
-# The same app for an Apple Silicon Mac, to check builds (needs Xcode's Command Line Tools).
-# Its key and data go next to it, in dist/.
+# The same app for an Apple Silicon Mac, to check builds and releases (needs Xcode's Command Line
+# Tools). Its key and data go next to it, in dist/. With VERSION it updates itself like SAF.exe.
 mac:
 	mkdir -p dist/SAF.app/Contents/MacOS dist/SAF.app/Contents/Resources
 	CGO_ENABLED=1 CGO_LDFLAGS="-framework UniformTypeIdentifiers" go build -tags desktop,production -trimpath \
-		-ldflags="-s -w" -o dist/SAF.app/Contents/MacOS/SAF ./cmd/saf
+		-ldflags="-s -w -X main.version=$(VERSION)" -o dist/SAF.app/Contents/MacOS/SAF ./cmd/saf
 	cp build/darwin/Info.plist dist/SAF.app/Contents/
 	cp build/darwin/icon.icns dist/SAF.app/Contents/Resources/
 

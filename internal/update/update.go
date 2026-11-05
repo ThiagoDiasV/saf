@@ -1,9 +1,9 @@
 // Package update keeps the pharmacy's SAF.exe current from this repository's GitHub releases.
 //
-// Each release carries latest.json (its version, the address of its SAF.exe and that file's
-// SHA-256) and latest.json.sig, an ed25519 signature made in CI with a key only the release job
-// holds. SAF installs a release only when the signature matches ReleaseKey, built into it, so a
-// swapped download or a hijacked address can't put another program on the PC.
+// Each release carries, per system, a manifest (latest.json for Windows: its version, the address
+// of its SAF.exe and that file's SHA-256) and its .sig, an ed25519 signature made in CI with a key
+// only the release job holds. SAF installs a release only when the signature matches ReleaseKey,
+// built into it, so a swapped download or a hijacked address can't put another program on the PC.
 package update
 
 import (
@@ -30,20 +30,46 @@ import (
 // SAF_SIGNING_KEY secret of the "release" environment on GitHub.
 const ReleaseKey = "3QDhJWHXIDgKIww3qqkeHC6pL9JKn1egTpWjCVAkRzM="
 
-// LatestURL is where the newest release's latest.json and latest.json.sig are downloaded from.
+// LatestURL is where the newest release's files are downloaded from.
 const LatestURL = "https://github.com/ThiagoDiasV/saf/releases/latest/download"
 
-// GitHub is where SAF's releases are and the key they are signed with.
-func GitHub() (Source, error) {
+// Asset is one system's release files: the program and the manifest that points to it.
+type Asset struct{ Program, Manifest string }
+
+// assets: Windows is the pharmacy's; the Mac build is for checking releases. Windows keeps
+// latest.json, the name the first releases used, so they still find their updates.
+var assets = map[string]Asset{
+	"windows": {Program: "SAF.exe", Manifest: "latest.json"},
+	"darwin":  {Program: "SAF-mac", Manifest: "latest-mac.json"},
+}
+
+// AssetFor returns the release files of a system (GOOS), if SAF updates there.
+func AssetFor(goos string) (Asset, bool) {
+	a, ok := assets[goos]
+	return a, ok
+}
+
+// GitHub is where SAF's releases for goos are and the key they are signed with.
+func GitHub(goos string) (Source, error) {
+	asset, ok := AssetFor(goos)
+	if !ok {
+		return Source{}, fmt.Errorf("SAF has no releases for %s", goos)
+	}
 	key, err := base64.StdEncoding.DecodeString(ReleaseKey)
 	if err != nil || len(key) != ed25519.PublicKeySize {
 		return Source{}, fmt.Errorf("ReleaseKey must be a %d-byte ed25519 public key in base64, as `release keygen` prints", ed25519.PublicKeySize)
 	}
-	return Source{BaseURL: LatestURL, Key: key, Client: &http.Client{Timeout: 15 * time.Minute}}, nil
+	return Source{BaseURL: LatestURL, Manifest: asset.Manifest, Key: key, Client: &http.Client{Timeout: 15 * time.Minute}}, nil
 }
 
-// PreviousName is what the replaced SAF.exe is renamed to, kept for a manual rollback.
-const PreviousName = "SAF.anterior.exe"
+// besideExe names a file next to the program: SAF.exe → SAF.anterior.exe, SAF → SAF.anterior.
+func besideExe(exe, tag string) string {
+	ext := filepath.Ext(exe)
+	return strings.TrimSuffix(exe, ext) + "." + tag + ext
+}
+
+// PreviousPath is where Install keeps the replaced program, for a manual rollback.
+func PreviousPath(exe string) string { return besideExe(exe, "anterior") }
 
 const (
 	maxManifestBytes = 16 << 10
@@ -83,7 +109,7 @@ func (v Version) before(o Version) bool {
 	return v.Patch < o.Patch
 }
 
-// Manifest is latest.json.
+// Manifest is latest.json (latest-mac.json on a Mac).
 type Manifest struct {
 	Version string `json:"version"`
 	URL     string `json:"url"`    // the release's SAF.exe, https only
@@ -103,58 +129,58 @@ func Sign(m Manifest, key ed25519.PrivateKey) (manifest, signature []byte, err e
 
 // Source is where releases come from and the key they must be signed with.
 type Source struct {
-	BaseURL string // holds latest.json and latest.json.sig
-	Key     ed25519.PublicKey
-	Client  *http.Client
+	BaseURL  string // holds the manifest and its .sig
+	Manifest string // latest.json or latest-mac.json
+	Key      ed25519.PublicKey
+	Client   *http.Client
 }
 
 // Latest returns the newest release's manifest, once its signature is checked.
 func (s Source) Latest(ctx context.Context) (Manifest, error) {
-	manifest, err := s.get(ctx, s.BaseURL+"/latest.json", maxManifestBytes)
+	manifest, err := s.get(ctx, s.BaseURL+"/"+s.Manifest, maxManifestBytes)
 	if err != nil {
 		return Manifest{}, err
 	}
-	encoded, err := s.get(ctx, s.BaseURL+"/latest.json.sig", maxManifestBytes)
+	encoded, err := s.get(ctx, s.BaseURL+"/"+s.Manifest+".sig", maxManifestBytes)
 	if err != nil {
 		return Manifest{}, err
 	}
 	signature, err := base64.StdEncoding.DecodeString(strings.TrimSpace(string(encoded)))
 	if err != nil || !ed25519.Verify(s.Key, manifest, signature) {
-		return Manifest{}, errors.New("latest.json is not signed with SAF's release key")
+		return Manifest{}, fmt.Errorf("%s is not signed with SAF's release key", s.Manifest)
 	}
 	var m Manifest
 	if err := json.Unmarshal(manifest, &m); err != nil {
-		return Manifest{}, fmt.Errorf("read latest.json: %w", err)
+		return Manifest{}, fmt.Errorf("read %s: %w", s.Manifest, err)
 	}
 	if _, err := ParseVersion(m.Version); err != nil {
 		return Manifest{}, err
 	}
 	if !strings.HasPrefix(m.URL, "https://") {
-		return Manifest{}, fmt.Errorf("latest.json: download address %q is not https", m.URL)
+		return Manifest{}, fmt.Errorf("%s: download address %q is not https", s.Manifest, m.URL)
 	}
 	return m, nil
 }
 
-// Install downloads m's SAF.exe next to exe, checks its SHA-256, and swaps it in: exe is renamed
-// to PreviousName and the new file takes its name. Windows lets a running program be renamed, so
-// this works while SAF is open; the new version runs from the next start.
+// Install downloads m's program next to exe, checks its SHA-256, and swaps it in: exe moves to
+// PreviousPath and the new file takes its name. Windows (and macOS) let a running program be
+// renamed, so this works while SAF is open; the new version runs from the next start.
 func (s Source) Install(ctx context.Context, m Manifest, exe string) error {
 	body, err := s.get(ctx, m.URL, maxExeBytes)
 	if err != nil {
 		return err
 	}
 	if sum := sha256.Sum256(body); hex.EncodeToString(sum[:]) != strings.ToLower(m.SHA256) {
-		return fmt.Errorf("SAF.exe %s: SHA-256 %x does not match latest.json's %s", m.Version, sum, m.SHA256)
+		return fmt.Errorf("SAF %s: SHA-256 %x does not match the manifest's %s", m.Version, sum, m.SHA256)
 	}
-	dir := filepath.Dir(exe)
-	next := filepath.Join(dir, "SAF.novo.exe")
+	next := besideExe(exe, "novo")
 	if err := writeExe(next, body); err != nil {
 		return err
 	}
-	previous := filepath.Join(dir, PreviousName)
+	previous := PreviousPath(exe)
 	if err := os.Remove(previous); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		os.Remove(next)
-		return fmt.Errorf("remove the older %s: %w", PreviousName, err)
+		return fmt.Errorf("remove the older %s: %w", previous, err)
 	}
 	if err := os.Rename(exe, previous); err != nil {
 		os.Remove(next)

@@ -47,7 +47,7 @@ func withUpdates(t *testing.T, app *testApp, version string) (m *update.Manager,
 	require.NoError(t, os.WriteFile(running, []byte("SAF 1.2.0"), 0o755))
 	restarted = make(chan struct{}, 1)
 	m = &update.Manager{
-		Source:  update.Source{BaseURL: srv.URL, Key: key.Public().(ed25519.PublicKey), Client: srv.Client()},
+		Source:  update.Source{BaseURL: srv.URL, Manifest: "latest.json", Key: key.Public().(ed25519.PublicKey), Client: srv.Client()},
 		Current: update.Version{Major: 1, Minor: 2},
 		Exe:     running,
 		Restart: func() { restarted <- struct{}{} },

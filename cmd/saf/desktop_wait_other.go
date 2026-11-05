@@ -2,7 +2,17 @@
 
 package main
 
-import "time"
+import (
+	"syscall"
+	"time"
+)
 
-// waitForExit is for restarting into an update, which only the Windows build does.
-func waitForExit(int, time.Duration) {}
+// waitForExit waits, up to limit, for the SAF that restarted into this one to close, so its
+// window has let go before this one opens. Signal 0 only asks whether the process still exists.
+func waitForExit(pid int, limit time.Duration) {
+	for deadline := time.Now().Add(limit); time.Now().Before(deadline); time.Sleep(100 * time.Millisecond) {
+		if syscall.Kill(pid, 0) != nil {
+			return
+		}
+	}
+}

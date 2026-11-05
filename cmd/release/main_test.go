@@ -32,10 +32,11 @@ func TestKeygenThenSignMakesAReleaseSAFTrusts(t *testing.T) {
 	private, err := os.ReadFile(keyFile)
 	require.NoError(t, err)
 	assert.NotContains(t, stdout.String(), strings.TrimSpace(string(private)), "the private key is never printed")
-	exe := filepath.Join(dir, "SAF.exe")
-	require.NoError(t, os.WriteFile(exe, []byte("SAF 1.4.0"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "SAF.exe"), []byte("SAF 1.4.0"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "SAF-mac"), []byte("SAF 1.4.0 mac"), 0o755))
 
-	require.NoError(t, sign("1.4.0", exe, dir, string(private)))
+	require.NoError(t, sign("1.4.0", "windows", dir, string(private)))
+	require.NoError(t, sign("1.4.0", "darwin", dir, string(private)))
 
 	manifest, err := os.ReadFile(filepath.Join(dir, "latest.json"))
 	require.NoError(t, err)
@@ -49,14 +50,24 @@ func TestKeygenThenSignMakesAReleaseSAFTrusts(t *testing.T) {
 	assert.Equal(t, "1.4.0", m.Version)
 	assert.Equal(t, "https://github.com/ThiagoDiasV/saf/releases/download/v1.4.0/SAF.exe", m.URL)
 	assert.Len(t, m.SHA256, 64)
+
+	mac, err := os.ReadFile(filepath.Join(dir, "latest-mac.json"))
+	require.NoError(t, err)
+	encoded, err = os.ReadFile(filepath.Join(dir, "latest-mac.json.sig"))
+	require.NoError(t, err)
+	signature, err = base64.StdEncoding.DecodeString(string(encoded))
+	require.NoError(t, err)
+	assert.True(t, ed25519.Verify(public, mac, signature))
+	require.NoError(t, json.Unmarshal(mac, &m))
+	assert.Equal(t, "https://github.com/ThiagoDiasV/saf/releases/download/v1.4.0/SAF-mac", m.URL)
 }
 
-func TestSignRefusesABadVersionOrKey(t *testing.T) {
-	exe := filepath.Join(t.TempDir(), "SAF.exe")
-	require.NoError(t, os.WriteFile(exe, []byte("SAF"), 0o755))
+func TestSignRefusesABadVersionSystemOrKey(t *testing.T) {
+	dir := t.TempDir()
 
-	assert.ErrorContains(t, sign("v1.4", exe, t.TempDir(), ""), "want major.minor.patch")
-	assert.ErrorContains(t, sign("1.4.0", exe, t.TempDir(), ""), "SAF_SIGNING_KEY must hold")
+	assert.ErrorContains(t, sign("v1.4", "windows", dir, ""), "want major.minor.patch")
+	assert.ErrorContains(t, sign("1.4.0", "linux", dir, ""), "no releases for linux")
+	assert.ErrorContains(t, sign("1.4.0", "windows", dir, ""), "SAF_SIGNING_KEY must hold")
 }
 
 func TestKeygenNeverOverwritesAKey(t *testing.T) {

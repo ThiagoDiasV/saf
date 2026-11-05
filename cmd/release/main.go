@@ -1,9 +1,9 @@
 // Command release signs SAF releases. The release job (.github/workflows/release.yml) runs
 // `sign`; `keygen` makes the signing key once.
 //
-//	release keygen <private-key-file>              write a new private key there, print the public key
-//	release sign <version> <SAF.exe> <out-dir>     write latest.json and latest.json.sig there,
-//	                                               signed with the key in SAF_SIGNING_KEY
+//	release keygen <private-key-file>    write a new private key there, print the public key
+//	release sign <version> <goos> <dir>  sign the program of goos in dir (SAF.exe, SAF-mac): write
+//	                                     its manifest and .sig there, with the key in SAF_SIGNING_KEY
 package main
 
 import (
@@ -22,8 +22,8 @@ import (
 	"saf/internal/update"
 )
 
-// downloadURL is where GitHub serves a release's SAF.exe.
-const downloadURL = "https://github.com/ThiagoDiasV/saf/releases/download/v%s/SAF.exe"
+// downloadURL is where GitHub serves a file of a release.
+const downloadURL = "https://github.com/ThiagoDiasV/saf/releases/download/v%s/%s"
 
 func main() {
 	var err error
@@ -33,7 +33,7 @@ func main() {
 	case len(os.Args) == 5 && os.Args[1] == "sign":
 		err = sign(os.Args[2], os.Args[3], os.Args[4], os.Getenv("SAF_SIGNING_KEY"))
 	default:
-		err = errors.New("usage: release keygen <private-key-file> | release sign <version> <SAF.exe> <out-dir>")
+		err = errors.New("usage: release keygen <private-key-file> | release sign <version> <goos> <dir>")
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "release:", err)
@@ -63,27 +63,31 @@ func keygen(path string, out io.Writer) error {
 	return err
 }
 
-// sign writes latest.json and latest.json.sig for the SAF.exe of version into dir.
-func sign(version, exe, dir, encodedKey string) error {
+// sign writes the manifest and its signature for the program of goos (in dir) of version.
+func sign(version, goos, dir, encodedKey string) error {
 	if _, err := update.ParseVersion(version); err != nil {
 		return err
+	}
+	asset, ok := update.AssetFor(goos)
+	if !ok {
+		return fmt.Errorf("SAF has no releases for %s", goos)
 	}
 	seed, err := base64.StdEncoding.DecodeString(strings.TrimSpace(encodedKey))
 	if err != nil || len(seed) != ed25519.SeedSize {
 		return fmt.Errorf("SAF_SIGNING_KEY must hold the %d-byte key `release keygen` wrote, in base64", ed25519.SeedSize)
 	}
-	body, err := os.ReadFile(exe)
+	body, err := os.ReadFile(filepath.Join(dir, asset.Program))
 	if err != nil {
 		return err
 	}
 	sum := sha256.Sum256(body)
-	m := update.Manifest{Version: version, URL: fmt.Sprintf(downloadURL, version), SHA256: hex.EncodeToString(sum[:])}
+	m := update.Manifest{Version: version, URL: fmt.Sprintf(downloadURL, version, asset.Program), SHA256: hex.EncodeToString(sum[:])}
 	manifest, signature, err := update.Sign(m, ed25519.NewKeyFromSeed(seed))
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(dir, "latest.json"), manifest, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, asset.Manifest), manifest, 0o644); err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(dir, "latest.json.sig"), signature, 0o644)
+	return os.WriteFile(filepath.Join(dir, asset.Manifest+".sig"), signature, 0o644)
 }
