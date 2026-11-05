@@ -83,3 +83,37 @@ func TestOnlyThisWindow(t *testing.T) {
 	assert.Equal(t, http.StatusOK, page.Code)
 	assert.Equal(t, "SAF", page.Body.String())
 }
+
+func TestRecordVersionSaysWhenAnUpdateTookEffect(t *testing.T) {
+	dir := t.TempDir()
+	start := func(version string, existingData bool) bool {
+		t.Helper()
+		updated, err := recordVersion(dir, version, existingData)
+		require.NoError(t, err)
+		return updated
+	}
+
+	assert.False(t, start("1.0.0", false), "a fresh install has nothing to report")
+	assert.False(t, start("1.0.0", true), "the next start on the same version")
+	assert.True(t, start("1.0.1", true), "an update took effect")
+	assert.False(t, start("1.0.1", true))
+	assert.Equal(t, "1.0.1\n", readFileString(t, filepath.Join(dir, "versao")))
+
+	older := t.TempDir()
+	updated, err := recordVersion(older, "1.0.1", true)
+	require.NoError(t, err)
+	assert.True(t, updated, "data from a version before the note: an update")
+
+	dev := t.TempDir()
+	updated, err = recordVersion(dev, "dev", true)
+	require.NoError(t, err)
+	assert.False(t, updated)
+	assert.NoFileExists(t, filepath.Join(dev, "versao"), "development builds note nothing")
+}
+
+func readFileString(t *testing.T, path string) string {
+	t.Helper()
+	b, err := os.ReadFile(path)
+	require.NoError(t, err)
+	return string(b)
+}

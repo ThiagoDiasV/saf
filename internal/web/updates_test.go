@@ -104,3 +104,12 @@ func TestWithoutUpdatesThereIsNoBanner(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, app.post("/atualizar", nil, admin).Code)
 	assert.Equal(t, http.StatusNotFound, app.post("/reiniciar", nil, admin).Code)
 }
+
+func TestTheFirstPageAfterAnUpdateSaysSo(t *testing.T) {
+	app := newTestApp(t, "")
+	app.handler = Handler(Config{Accounts: app.accounts, Inventory: app.inventory, KeyText: testKeyText,
+		Version: "1.0.1", JustUpdated: true, Now: func() time.Time { return app.now }})
+
+	assert.Contains(t, app.get("/login").Body.String(), "SAF atualizado para a versão 1.0.1.")
+	assert.NotContains(t, app.get("/login").Body.String(), "SAF atualizado", "once")
+}

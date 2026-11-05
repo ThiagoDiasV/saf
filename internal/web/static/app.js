@@ -1,10 +1,12 @@
 'use strict';
 
-const THEME_KEY = 'saf-tema';
+// The theme choice is a cookie, not localStorage: SAF's window gets a new port at every start, and
+// localStorage belongs to one port while cookies belong to the host.
+const themeCookie = 'saf-tema';
 
 // Loaded in <head> without defer, so a saved theme is applied before the first paint.
-const savedTheme = localStorage.getItem(THEME_KEY);
-if (savedTheme === 'light' || savedTheme === 'dark') document.documentElement.dataset.theme = savedTheme;
+const savedTheme = document.cookie.match(/(?:^|; )saf-tema=(light|dark)(?:;|$)/)?.[1];
+if (savedTheme) document.documentElement.dataset.theme = savedTheme;
 
 document.addEventListener('DOMContentLoaded', () => {
   // Theme toggle (absent on the login page).
@@ -21,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     themeButton.addEventListener('click', () => {
       const next = effectiveTheme() === 'dark' ? 'light' : 'dark';
       document.documentElement.dataset.theme = next;
-      localStorage.setItem(THEME_KEY, next);
+      document.cookie = `${themeCookie}=${next}; Path=/; Max-Age=31536000; SameSite=Lax`;
       paintThemeToggle();
     });
     prefersDark.addEventListener('change', paintThemeToggle);

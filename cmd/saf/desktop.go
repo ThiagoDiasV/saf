@@ -48,11 +48,17 @@ func desktop() error {
 		return err
 	}
 	dir := portableDir(exe)
+	dataDir := filepath.Join(dir, dataDirName)
+	_, statErr := os.Stat(filepath.Join(dataDir, "saf.db"))
 	store, box, keyText, err := openPortable(dir)
 	if err != nil {
 		return err
 	}
 	defer store.Close()
+	justUpdated, err := recordVersion(dataDir, version, statErr == nil)
+	if err != nil {
+		slog.Error("record version", "err", err) // only the "updated" toast depends on it
+	}
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -65,11 +71,12 @@ func desktop() error {
 		restart.Store(true)
 		runtime.Quit(*window.Load())
 	})
-	inventory, handler := app(store, box, filepath.Join(dir, dataDirName, "photos"), web.Config{
-		KeyText: keyText,
-		Version: version,
-		Domain:  "127.0.0.1", // a web page that points its own name at this PC gets nothing
-		Updates: updates,
+	inventory, handler := app(store, box, filepath.Join(dataDir, "photos"), web.Config{
+		KeyText:     keyText,
+		Version:     version,
+		JustUpdated: justUpdated,
+		Domain:      "127.0.0.1", // a web page that points its own name at this PC gets nothing
+		Updates:     updates,
 	})
 	server := newServer(onlyThisWindow(token, handler))
 	go func() {
@@ -82,7 +89,6 @@ func desktop() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go repeat(ctx, 24*time.Hour, "6-month purge", purge(inventory))
-	dataDir := filepath.Join(dir, dataDirName)
 	go repeat(ctx, time.Hour, "backup", backup(store, dataDir))
 
 	err = wails.Run(&options.App{

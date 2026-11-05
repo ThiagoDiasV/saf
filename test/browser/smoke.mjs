@@ -152,6 +152,7 @@ try {
     return document.documentElement.dataset.theme`) === 'dark');
   await open('/estoque');
   check('theme choice survives a reload', await js(`return document.documentElement.dataset.theme`) === 'dark');
+  check('the choice is a cookie, so a new port at the next start keeps it', await js(`return document.cookie.includes('saf-tema=dark')`));
   await js(`document.getElementById('theme-toggle').click(); return 1`);
   const menu = await js(`document.querySelector('[aria-controls=user-menu]').click();
     const opened = !document.getElementById('user-menu').hidden;

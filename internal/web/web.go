@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"path"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"saf/internal/auth"
@@ -45,6 +46,8 @@ type Config struct {
 	KeyText string
 	// Version is SAF's version, shown in the user menu.
 	Version string
+	// JustUpdated: SAF opened on a new version. The first page says so, once.
+	JustUpdated bool
 	// Updates, in the desktop app on Windows, is what the update banner shows and does. Nil
 	// elsewhere: no banner.
 	Updates *update.Manager
@@ -58,6 +61,7 @@ type server struct {
 	now           func() time.Time
 	keyText       string
 	version       string
+	updateNotice  atomic.Bool // the "SAF atualizado" toast is still to show
 	updates       *update.Manager
 	pages         map[string]*template.Template
 	fragments     *template.Template // the partials alone, for HTML the browser fetches into a page
@@ -125,6 +129,7 @@ func Handler(cfg Config) http.Handler {
 	if s.now == nil {
 		s.now = time.Now
 	}
+	s.updateNotice.Store(cfg.JustUpdated)
 	s.pages, s.fragments = s.parsePages()
 
 	mux := http.NewServeMux()
@@ -263,6 +268,9 @@ func (s *server) render(w http.ResponseWriter, r *http.Request, status int, page
 	data.Version = s.version
 	if data.Flash == nil {
 		data.Flash = takeFlash(w, r)
+	}
+	if data.Flash == nil && s.updateNotice.CompareAndSwap(true, false) {
+		data.Flash = &flash{Kind: "ok", Message: fmt.Sprintf("SAF atualizado para a versão %s.", s.version)}
 	}
 	data.Static = s.staticVersion
 	var buf bytes.Buffer

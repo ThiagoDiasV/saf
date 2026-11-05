@@ -18,9 +18,10 @@ import (
 )
 
 const (
-	keyFileName  = "chave.key" // next to the program, outside dados/: Drive never copies it
-	dataDirName  = "dados"
-	windowCookie = "saf_janela"
+	keyFileName     = "chave.key" // next to the program, outside dados/: Drive never copies it
+	dataDirName     = "dados"
+	versionFileName = "versao" // in dados/: the version that ran last
+	windowCookie    = "saf_janela"
 )
 
 // portableDir is the folder SAF keeps its files in: the one holding SAF.exe, or on a Mac the one
@@ -75,6 +76,29 @@ func createKey(keyFile, database string) error {
 	}
 	_, err = f.WriteString(seal.NewKey() + "\n")
 	return errors.Join(err, f.Close())
+}
+
+// recordVersion notes version as the one running in dataDir and reports whether another one ran
+// before, that is, an update just took effect. existingData says the database was there before
+// this start: without a note it means the earlier version predates the note; with neither,
+// this is a fresh install, with nothing to report. Development builds report nothing.
+func recordVersion(dataDir, version string, existingData bool) (bool, error) {
+	if version == "dev" {
+		return false, nil
+	}
+	file := filepath.Join(dataDir, versionFileName)
+	previous, err := os.ReadFile(file)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return false, err
+	}
+	last := strings.TrimSpace(string(previous))
+	if err := os.WriteFile(file, []byte(version+"\n"), 0o600); err != nil {
+		return false, err
+	}
+	if last == "" {
+		return existingData, nil
+	}
+	return last != version, nil
 }
 
 // onlyThisWindow answers only the window SAF opened. The window starts at /abrir?t=<token>,
