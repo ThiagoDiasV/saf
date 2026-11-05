@@ -14,7 +14,7 @@ const ADMIN_PASSWORD = 'paulo-farmacia-2026';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 const dir = mkdtempSync(join(tmpdir(), 'saf-smoke-'));
-const bin = join(dir, 'saf');
+const bin = join(dir, process.platform === 'win32' ? 'saf.exe' : 'saf');
 execFileSync('go', ['build', '-o', bin, './cmd/saf'], { stdio: 'inherit' });
 const keyFile = join(dir, 'key');
 writeFileSync(keyFile, execFileSync(bin, ['keygen']));

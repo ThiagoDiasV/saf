@@ -39,6 +39,7 @@ jobs:
           if ($key.Length -ne 44) { throw "SAF.exe keygen printed '$key'" }
 
           $saf = Start-Process -FilePath .\dist\SAF\SAF.exe -PassThru
+          try {
           $peers = @()
           foreach ($i in 1..40) {
             Start-Sleep -Seconds 1
@@ -58,17 +59,19 @@ jobs:
           if (-not $second.WaitForExit(20000)) { throw "a second SAF.exe kept running" }
           if ($saf.HasExited) { throw "the first SAF closed when the second started" }
           "a second double-click hands over to the open window"
-
-          Start-Sleep -Seconds 2
-          try {
-            Add-Type -AssemblyName System.Windows.Forms, System.Drawing
-            $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
-            $bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
-            [System.Drawing.Graphics]::FromImage($bitmap).CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
-            New-Item -ItemType Directory -Force shots | Out-Null
-            $bitmap.Save("$PWD\shots\saf-window.png")
-          } catch { "No screenshot: $_" }
-          Stop-Process -Id $saf.Id
+          } finally {
+            # Always: when the window doesn't show, the screen shows why (SAF's error box).
+            Start-Sleep -Seconds 2
+            try {
+              Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+              $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+              $bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
+              [System.Drawing.Graphics]::FromImage($bitmap).CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+              New-Item -ItemType Directory -Force shots | Out-Null
+              $bitmap.Save("$PWD\shots\saf-window.png")
+            } catch { "No screenshot: $_" }
+            Stop-Process -Id $saf.Id -ErrorAction SilentlyContinue
+          }
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
