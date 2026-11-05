@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"testing"
 	"testing/fstest"
@@ -162,6 +163,56 @@ func TestMigrateSnapshotsBeforeUpgrading(t *testing.T) {
 	assert.Equal(t, 1, x)
 	_, err = before.Exec("SELECT y FROM b")
 	assert.ErrorContains(t, err, "no such table: b")
+}
+
+func TestBackupCopiesTheDatabaseOnlyWhenItChanged(t *testing.T) {
+	dir := t.TempDir()
+	conn := openTestDB(t, dir)
+	addUser := func(login string) {
+		_, err := conn.Exec(`INSERT INTO users (name, login, password_hash, role, created_at)
+			VALUES ('Pessoa', ?, 'x', 'admin', '2026-11-05T12:00:00Z')`, login)
+		require.NoError(t, err)
+	}
+	addUser("paulo.mendes")
+	at := time.Date(2026, 11, 5, 14, 0, 0, 0, time.Local)
+
+	written, err := Backup(conn, dir, at)
+	require.NoError(t, err)
+	first := filepath.Join(dir, "backups", "saf-2026-11-05-1400.db")
+	assert.Equal(t, first, written)
+	var users int
+	require.NoError(t, openRawDB(t, written).QueryRow("SELECT count(*) FROM users").Scan(&users))
+	assert.Equal(t, 1, users, "the copy holds the data")
+	assert.NoFileExists(t, filepath.Join(dir, ".backup.db"))
+
+	written, err = Backup(conn, dir, at.Add(time.Hour))
+	require.NoError(t, err)
+	assert.Empty(t, written, "nothing changed since the last copy")
+
+	hourAgo := time.Now().Add(-time.Hour)
+	require.NoError(t, os.Chtimes(first, hourAgo, hourAgo))
+	addUser("thiago.dias")
+	written, err = Backup(conn, dir, at.Add(2*time.Hour))
+	require.NoError(t, err)
+	assert.Equal(t, filepath.Join(dir, "backups", "saf-2026-11-05-1600.db"), written, "a save since the last copy")
+}
+
+func TestBackupDeletesCopiesOlderThan30Days(t *testing.T) {
+	dir := t.TempDir()
+	conn := openTestDB(t, dir)
+	backups := filepath.Join(dir, "backups")
+	require.NoError(t, os.MkdirAll(backups, 0o700))
+	for _, name := range []string{"saf-2026-10-01-0900.db", "saf-2026-10-20-0900.db", "pre-migration-002.db", "notas.txt"} {
+		require.NoError(t, os.WriteFile(filepath.Join(backups, name), []byte("x"), 0o600))
+	}
+
+	_, err := Backup(conn, dir, time.Date(2026, 11, 5, 14, 0, 0, 0, time.Local))
+	require.NoError(t, err)
+
+	assert.NoFileExists(t, filepath.Join(backups, "saf-2026-10-01-0900.db"), "35 days old")
+	assert.FileExists(t, filepath.Join(backups, "saf-2026-10-20-0900.db"))
+	assert.FileExists(t, filepath.Join(backups, "pre-migration-002.db"), "pre-migration copies stay")
+	assert.FileExists(t, filepath.Join(backups, "notas.txt"))
 }
 
 func TestFailedMigrationRollsBack(t *testing.T) {

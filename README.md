@@ -43,8 +43,19 @@ that window forward. Everything stays in the folder around the program:
 ```
 C:\SAF\SAF.exe
 C:\SAF\chave.key      the encryption key, made on the first start (never synced to Drive)
-C:\SAF\dados\         the database and the photos
+C:\SAF\dados\         the database (saf.db) and the photos (photos\)
+C:\SAF\dados\backups\ hourly copies of the database, saf-AAAA-MM-DD-HHMM.db
 ```
+
+**Backups.** While SAF is open, every hour and once more when it closes, SAF copies the database
+into `dados\backups` if anything changed, and deletes copies older than 30 days. Google Drive for
+desktop syncs `dados\backups` and `dados\photos` to the pharmacy's Drive. Never sync `dados` as a
+whole (Drive would upload `saf.db` mid-write) and never put `chave.key` in Drive.
+
+**Restore** (a new PC, or going back to a copy): close SAF; put `SAF.exe` in `C:\SAF`; copy the
+chosen `saf-….db` from Drive to `C:\SAF\dados\saf.db` (delete any `saf.db-wal` and `saf.db-shm`
+there) and the Drive `photos` folder to `C:\SAF\dados\photos`; create `C:\SAF\chave.key` with the
+text of the printed key. Then open SAF.
 
 If `dados` exists but `chave.key` doesn't, SAF refuses to start rather than make a new key that
 can't read the old names and photos: put the printed key back in `chave.key`.

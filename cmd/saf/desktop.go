@@ -10,6 +10,7 @@ package main
 import (
 	"context"
 	"crypto/rand"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -28,6 +29,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
+	"saf/internal/db"
 	"saf/internal/update"
 	"saf/internal/web"
 )
@@ -80,6 +82,8 @@ func desktop() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go repeat(ctx, 24*time.Hour, "6-month purge", purge(inventory))
+	dataDir := filepath.Join(dir, dataDirName)
+	go repeat(ctx, time.Hour, "backup", backup(store, dataDir))
 
 	err = wails.Run(&options.App{
 		Title:            "SAF – Serviço de Apoio à Farmácia",
@@ -114,12 +118,26 @@ func desktop() error {
 	shutdownCtx, stop := context.WithTimeout(context.Background(), 10*time.Second)
 	defer stop()
 	err = errors.Join(err, server.Shutdown(shutdownCtx))
+	// One more copy as SAF closes, so the last hour's work is in backups/ too.
+	err = errors.Join(err, backup(store, dataDir)(context.Background()))
 	if restart.Load() {
 		cmd := exec.Command(exe) // the installed version, under the same name
 		cmd.Env = append(os.Environ(), waitPIDVar+"="+strconv.Itoa(os.Getpid()))
 		err = errors.Join(err, cmd.Start())
 	}
 	return err
+}
+
+// backup copies the database into dataDir/backups when it changed (db.Backup); Google Drive
+// carries that folder off the PC.
+func backup(store *sql.DB, dataDir string) func(context.Context) error {
+	return func(context.Context) error {
+		written, err := db.Backup(store, dataDir, time.Now())
+		if written != "" {
+			slog.Info("backup", "file", written)
+		}
+		return err
+	}
 }
 
 // newUpdates returns the updater for a release build on Windows. Development builds ("dev") and

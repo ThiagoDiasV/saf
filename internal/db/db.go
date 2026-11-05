@@ -143,3 +143,95 @@ func snapshot(conn *sql.DB, file string) error {
 	}
 	return nil
 }
+
+// backupLayout names the hourly copies; the date and time are those of the PC.
+const backupLayout = "saf-2006-01-02-1504.db"
+
+// backupRetention is how long hourly copies are kept: backups expire too (docs/PLAN.md §1).
+const backupRetention = 30 * 24 * time.Hour
+
+// Backup copies the database to dataDir/backups/saf-<date>-<time>.db when it changed since the
+// newest copy there, and deletes copies older than 30 days. A sync app (Google Drive) carries the
+// folder off the PC. It returns the copy written, or "" when nothing changed.
+//
+//	written, err := db.Backup(conn, "dados", time.Now())
+func Backup(conn *sql.DB, dataDir string, now time.Time) (string, error) {
+	dir := filepath.Join(dataDir, "backups")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return "", fmt.Errorf("create backup dir: %w", err)
+	}
+	changed, err := changedSinceBackup(dataDir, dir)
+	if err != nil {
+		return "", err
+	}
+	written := ""
+	if changed {
+		// Written next to the database first, outside backups/, so the sync app never uploads
+		// half a copy.
+		tmp := filepath.Join(dataDir, ".backup.db")
+		if err := os.Remove(tmp); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return "", err
+		}
+		if _, err := conn.Exec("VACUUM INTO ?", tmp); err != nil {
+			return "", fmt.Errorf("back up to %s: %w", tmp, err)
+		}
+		written = filepath.Join(dir, now.Format(backupLayout))
+		if err := os.Rename(tmp, written); err != nil {
+			return "", fmt.Errorf("move backup to %s: %w", written, err)
+		}
+	}
+	return written, pruneBackups(dir, now)
+}
+
+// changedSinceBackup compares the database files' last write with the newest hourly copy. Every
+// save touches saf.db-wal, and a checkpoint touches saf.db.
+func changedSinceBackup(dataDir, dir string) (bool, error) {
+	var lastWrite time.Time
+	for _, name := range []string{"saf.db", "saf.db-wal"} {
+		info, err := os.Stat(filepath.Join(dataDir, name))
+		if errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return false, err
+		}
+		if info.ModTime().After(lastWrite) {
+			lastWrite = info.ModTime()
+		}
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return false, err
+	}
+	for _, e := range entries {
+		if _, err := time.Parse(backupLayout, e.Name()); err != nil {
+			continue
+		}
+		info, err := e.Info()
+		if err != nil {
+			return false, err
+		}
+		if !info.ModTime().Before(lastWrite) {
+			return false, nil // a copy at least as new as the last save
+		}
+	}
+	return true, nil
+}
+
+// pruneBackups deletes hourly copies older than backupRetention. Pre-migration copies stay.
+func pruneBackups(dir string, now time.Time) error {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+	for _, e := range entries {
+		taken, err := time.ParseInLocation(backupLayout, e.Name(), now.Location())
+		if err != nil || now.Sub(taken) <= backupRetention {
+			continue
+		}
+		if err := os.Remove(filepath.Join(dir, e.Name())); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("delete old backup %s: %w", e.Name(), err)
+		}
+	}
+	return nil
+}
