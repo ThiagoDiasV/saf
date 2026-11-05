@@ -128,25 +128,11 @@ func TestLoginStartsSession(t *testing.T) {
 	assert.Equal(t, http.SameSiteLaxMode, c.SameSite)
 	assert.Equal(t, "/", c.Path)
 	assert.Equal(t, 12*60*60, c.MaxAge)
-	assert.False(t, c.Secure, "plain HTTP in local development")
 
 	page := app.get("/estoque", c)
 	assert.Equal(t, http.StatusOK, page.Code)
 	assert.Contains(t, page.Body.String(), "Paulo Mendes")
 	assert.Equal(t, "/estoque", app.get("/login", c).Header().Get("Location"), "already logged in")
-}
-
-func TestSessionCookieIsSecureOverHTTPS(t *testing.T) {
-	app := newTestApp(t, "")
-	app.addUser(t, "Paulo Mendes", "paulo.mendes", auth.RoleAdmin)
-	r := httptest.NewRequest(http.MethodPost, "https://saf.example/login",
-		strings.NewReader(url.Values{"login": {"paulo.mendes"}, "password": {testPassword}}.Encode()))
-	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	c := cookieNamed(app.serve(r), sessionCookie)
-
-	require.NotNil(t, c)
-	assert.True(t, c.Secure)
 }
 
 func TestLoginErrors(t *testing.T) {

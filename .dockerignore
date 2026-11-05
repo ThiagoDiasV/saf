@@ -1,9 +1,0 @@
-.git
-.github
-data
-docs
-*.db
-*.db-*
-.trivy-image.tar
-dist
-.litestream-src

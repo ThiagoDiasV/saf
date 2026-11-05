@@ -44,14 +44,7 @@ func TestSecurityHeadersOnEveryResponse(t *testing.T) {
 		for header, want := range wantHeaders {
 			assert.Equal(t, want, res.Header().Get(header), "%s: %s", name, header)
 		}
-		assert.Empty(t, res.Header().Get("Strict-Transport-Security"), "%s: no HSTS over plain HTTP", name)
 	}
-}
-
-func TestHSTSOverHTTPS(t *testing.T) {
-	res := newTestApp(t, "").serve(httptest.NewRequest(http.MethodGet, "https://saf.example/login", nil))
-
-	assert.Equal(t, "max-age=31536000; includeSubDomains", res.Header().Get("Strict-Transport-Security"))
 }
 
 func TestCacheControl(t *testing.T) {
@@ -112,17 +105,16 @@ func TestNoCORSHeaders(t *testing.T) {
 }
 
 func TestHostCheck(t *testing.T) {
-	app := newTestApp(t, "saf-farmacia.duckdns.org")
+	app := newTestApp(t, "127.0.0.1")
 	request := func(host string) int {
 		r := httptest.NewRequest(http.MethodGet, "/login", nil)
 		r.Host = host
 		return app.serve(r).Code
 	}
 
-	assert.Equal(t, http.StatusMisdirectedRequest, request("34.75.10.20"), "bare IP")
-	assert.Equal(t, http.StatusMisdirectedRequest, request("evil.example"))
-	assert.Equal(t, http.StatusOK, request("saf-farmacia.duckdns.org"))
-	assert.Equal(t, http.StatusOK, request("SAF-Farmacia.duckdns.org:443"))
+	assert.Equal(t, http.StatusMisdirectedRequest, request("evil.example:51234"), "a page pointing its name at this PC (DNS rebinding)")
+	assert.Equal(t, http.StatusMisdirectedRequest, request("localhost:51234"))
+	assert.Equal(t, http.StatusOK, request("127.0.0.1:51234"))
 }
 
 func TestOnlyFormPostsAreAccepted(t *testing.T) {

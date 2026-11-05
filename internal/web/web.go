@@ -36,7 +36,8 @@ const (
 type Config struct {
 	Accounts  *auth.Accounts
 	Inventory *stock.Inventory
-	// Domain, when set, is the only Host accepted (production). Empty in local development.
+	// Domain, when set, is the only Host accepted: the desktop app passes 127.0.0.1, so a web page
+	// that points its own name at this computer (DNS rebinding) gets nothing. Empty in development.
 	Domain string
 	// Now is the clock; nil means time.Now. Tests move it to expire sessions and rate limits.
 	Now func() time.Time
@@ -322,7 +323,7 @@ func contentHash(files fs.FS) string {
 func setFlash(w http.ResponseWriter, r *http.Request, kind, message string) {
 	http.SetCookie(w, &http.Cookie{
 		Name: flashCookie, Value: base64.RawURLEncoding.EncodeToString([]byte(kind + ":" + message)),
-		Path: "/", MaxAge: 60, HttpOnly: true, Secure: r.TLS != nil, SameSite: http.SameSiteLaxMode,
+		Path: "/", MaxAge: 60, HttpOnly: true, SameSite: http.SameSiteLaxMode,
 	})
 }
 
@@ -331,7 +332,7 @@ func takeFlash(w http.ResponseWriter, r *http.Request) *flash {
 	if err != nil {
 		return nil
 	}
-	http.SetCookie(w, &http.Cookie{Name: flashCookie, Path: "/", MaxAge: -1, HttpOnly: true, Secure: r.TLS != nil})
+	http.SetCookie(w, &http.Cookie{Name: flashCookie, Path: "/", MaxAge: -1, HttpOnly: true})
 	raw, err := base64.RawURLEncoding.DecodeString(c.Value)
 	if err != nil {
 		return nil
@@ -359,11 +360,11 @@ func (s *server) startSession(w http.ResponseWriter, r *http.Request, userID int
 	}
 	http.SetCookie(w, &http.Cookie{
 		Name: sessionCookie, Value: token, Path: "/", MaxAge: int(auth.SessionDuration.Seconds()),
-		HttpOnly: true, Secure: r.TLS != nil, SameSite: http.SameSiteLaxMode,
+		HttpOnly: true, SameSite: http.SameSiteLaxMode,
 	})
 	return nil
 }
 
 func clearSessionCookie(w http.ResponseWriter, r *http.Request) {
-	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Path: "/", MaxAge: -1, HttpOnly: true, Secure: r.TLS != nil})
+	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Path: "/", MaxAge: -1, HttpOnly: true})
 }

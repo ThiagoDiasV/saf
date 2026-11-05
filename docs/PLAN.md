@@ -3,6 +3,12 @@
 Stock control for the UNILAB university pharmacy. One admin and one view-only user, pt-BR UI,
 phone and desktop. Source requirements: `CRIAR UM SISTEMA DE CONTROLE DE ESTOQUE DE UMA FARMÁCIA UNIVERSITÁRIA.docx`.
 
+> **2026-11-05: no cloud.** SAF runs only on the pharmacy's Windows PC, as a desktop app: the same
+> screens in their own window, photos taken on that PC, backups as database snapshots plus the
+> photos folder synced by Google Drive, updates from this repo's releases. The VM, HTTPS, firewall
+> and Litestream parts below are outdated and get rewritten in Phase 10e; the code no longer has
+> them (Phase 10b).
+
 **Internal control only.** SAF is not the legal record for controlled substances (SNGPC / Portaria 344).
 
 The clickable prototype `docs/mockup/index.html` is the UI spec. The real app copies its CSS and markup;

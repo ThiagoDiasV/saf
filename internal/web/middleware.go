@@ -28,9 +28,6 @@ func securityHeaders(next http.Handler) http.Handler {
 		h.Set("Cross-Origin-Opener-Policy", "same-origin")
 		h.Set("Cross-Origin-Resource-Policy", "same-origin")
 		h.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()")
-		if r.TLS != nil {
-			h.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-		}
 		// Static URLs carry the build version (?v=), so a day of caching never serves stale files.
 		// Everything else may show patient data on a shared counter PC: never cache it.
 		if strings.HasPrefix(r.URL.Path, "/static/") {

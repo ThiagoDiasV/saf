@@ -1,8 +1,7 @@
 // Command saf runs SAF, the stock control app of the UNILAB university pharmacy.
 //
-//	saf                                local trial: sample data, this computer only (trial.go)
-//	saf serve                          start the web server on :8080
-//	saf create-admin <login> "<nome>"  create an administrator and print a first password
+//	saf serve                          development: SAF in the browser at http://127.0.0.1:8080
+//	saf create-admin <login> "<nome>"  add an administrator and print a first password
 //	saf keygen                         print a new encryption key for SAF_KEY_FILE
 //
 // Configuration comes from the environment; see docs/PLAN.md §2.
@@ -12,7 +11,6 @@ import (
 	"context"
 	"crypto/rand"
 	"database/sql"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -23,8 +21,6 @@ import (
 	"syscall"
 	"time"
 
-	"golang.org/x/crypto/acme/autocert"
-
 	"saf/internal/auth"
 	"saf/internal/db"
 	"saf/internal/seal"
@@ -33,7 +29,6 @@ import (
 )
 
 const usage = `uso:
-  saf                       versão de teste neste computador
   saf serve
   saf create-admin <login> "<nome completo>"
   saf keygen`
@@ -41,12 +36,6 @@ const usage = `uso:
 func main() {
 	var err error
 	switch {
-	case len(os.Args) == 1: // a double-click
-		if err := trial(); err != nil {
-			waitBeforeClosing(err)
-			os.Exit(1)
-		}
-		return
 	case len(os.Args) == 2 && os.Args[1] == "serve":
 		err = serve()
 	case len(os.Args) == 4 && os.Args[1] == "create-admin":
@@ -77,6 +66,7 @@ func openStore(dir string) (*sql.DB, error) {
 	return db.Open(dir)
 }
 
+// serve runs SAF for development: plain HTTP, reachable from this computer only.
 func serve() error {
 	// Refuse to start without the key rather than run unable to read or write patient data.
 	box, err := seal.LoadKey(os.Getenv("SAF_KEY_FILE"))
@@ -92,26 +82,12 @@ func serve() error {
 		return err
 	}
 
-	domain := os.Getenv("SAF_DOMAIN")
-	inventory, handler := app(store, box, filepath.Join(dataDir(), "photos"), domain)
-	if domain == "" { // local work: plain HTTP
-		plain, err := listen(":8080", newServer(handler), false)
-		if err != nil {
-			return err
-		}
-		return run(inventory, plain)
-	}
-	secure, redirect := httpsServers(handler, domain, filepath.Join(dataDir(), "autocert"))
-	https, err := listen(":8443", secure, true)
+	inventory, handler := app(store, box, filepath.Join(dataDir(), "photos"), "")
+	listener, err := net.Listen("tcp", "127.0.0.1:8080")
 	if err != nil {
 		return err
 	}
-	http80, err := listen(":8080", redirect, false)
-	if err != nil {
-		https.listener.Close()
-		return err
-	}
-	return run(inventory, https, http80)
+	return run(inventory, newServer(handler), listener)
 }
 
 // firstRun gives an empty database its first-run administrator (auth.SetupLogin), who must set
@@ -138,62 +114,21 @@ func newServer(handler http.Handler) *http.Server {
 	return &http.Server{
 		Handler:           handler,
 		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       120 * time.Second, // photo uploads on slow mobile data
+		ReadTimeout:       120 * time.Second, // photo uploads
 		WriteTimeout:      60 * time.Second,
 		IdleTimeout:       120 * time.Second,
 		MaxHeaderBytes:    64 << 10,
 	}
 }
 
-// httpsServers serves SAF over HTTPS with a Let's Encrypt certificate for domain (kept in
-// cacheDir and renewed by itself), plus plain HTTP that only answers Let's Encrypt's checks and
-// redirects everything else to HTTPS.
-//
-// Let's Encrypt checks from servers abroad and port 443 only accepts Brazil, so its check on
-// 443 fails and autocert falls back to the one on port 80, which stays open (docs/PLAN.md §3).
-func httpsServers(handler http.Handler, domain, cacheDir string) (secure, redirect *http.Server) {
-	certs := &autocert.Manager{
-		Prompt:     autocert.AcceptTOS,
-		HostPolicy: autocert.HostWhitelist(domain),
-		Cache:      autocert.DirCache(cacheDir),
-	}
-	secure = newServer(handler)
-	secure.TLSConfig = certs.TLSConfig()
-	return secure, newServer(certs.HTTPHandler(nil))
-}
-
-// endpoint is one address SAF answers on.
-type endpoint struct {
-	server   *http.Server
-	listener net.Listener
-	tls      bool // certificates come from server.TLSConfig
-}
-
-func listen(addr string, server *http.Server, tls bool) (endpoint, error) {
-	listener, err := net.Listen("tcp", addr)
-	if err != nil {
-		return endpoint{}, err
-	}
-	return endpoint{server: server, listener: listener, tls: tls}, nil
-}
-
-// run serves the endpoints until the process is told to stop, with the daily 6-month purge.
-func run(inventory *stock.Inventory, endpoints ...endpoint) error {
-	// docker stop sends SIGTERM (so does closing the trial's window on Windows): finish in-flight
-	// requests, then close the database cleanly.
+// run serves until the process is told to stop (Ctrl+C, or Windows closing it), with the daily
+// 6-month purge; then it finishes in-flight requests so the database closes cleanly.
+func run(inventory *stock.Inventory, server *http.Server, listener net.Listener) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	serveErr := make(chan error, len(endpoints))
-	for _, e := range endpoints {
-		go func() {
-			if e.tls {
-				serveErr <- e.server.ServeTLS(e.listener, "", "")
-			} else {
-				serveErr <- e.server.Serve(e.listener)
-			}
-		}()
-		slog.Info("SAF listening", "addr", e.listener.Addr().String(), "https", e.tls)
-	}
+	serveErr := make(chan error, 1)
+	go func() { serveErr <- server.Serve(listener) }()
+	slog.Info("SAF listening", "url", "http://"+listener.Addr().String())
 	go purgeDaily(ctx, inventory)
 
 	select {
@@ -203,12 +138,9 @@ func run(inventory *stock.Inventory, endpoints ...endpoint) error {
 	}
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	var errs []error
-	for _, e := range endpoints {
-		errs = append(errs, e.server.Shutdown(shutdownCtx))
-	}
+	err := server.Shutdown(shutdownCtx)
 	slog.Info("SAF stopped")
-	return errors.Join(errs...)
+	return err
 }
 
 // purgeDaily deletes photos and first names past six months (LGPD), at startup and then every
@@ -231,8 +163,8 @@ func purgeDaily(ctx context.Context, inventory *stock.Inventory) {
 	}
 }
 
-// createAdmin makes the first administrator (docs/PLAN.md §1). The password is random and shown
-// once; the admin changes it in "Alterar minha senha".
+// createAdmin adds an administrator from the command line, e.g. when the only one has forgotten
+// their password. The password is random and shown once; they change it in "Alterar minha senha".
 func createAdmin(login, name string) error {
 	store, err := openStore(dataDir())
 	if err != nil {
