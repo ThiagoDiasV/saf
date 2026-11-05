@@ -35,4 +35,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: >-
           gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes --title "SAF ${GITHUB_REF_NAME#v}"
-          dist/release/SAF.exe dist/release/latest.json dist/release/latest.json.sig
+          dist/release/SAF.exe dist/release/latest.json dist/release/latest.json.sig docs/LEIA-ME.txt

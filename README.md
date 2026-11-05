@@ -32,8 +32,11 @@ names and photos in `./data` cannot be read. Both are in `.gitignore`.
 
 ## The desktop app
 
+Instructions for the pharmacy, in Portuguese: [`docs/LEIA-ME.txt`](docs/LEIA-ME.txt) (install, first access,
+Google Drive, updates). Every release and `make windows` ship it next to `SAF.exe`.
+
 ```sh
-make windows   # dist/SAF-windows.zip: SAF\SAF.exe, for the pharmacy's PC
+make windows   # dist/SAF-windows.zip: SAF\SAF.exe and LEIA-ME.txt, for the pharmacy's PC
 make mac       # dist/SAF.app, to check builds on an Apple Silicon Mac (needs Xcode's Command Line Tools)
 ```
 

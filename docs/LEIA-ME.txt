@@ -1,0 +1,79 @@
+SAF – Serviço de Apoio à Farmácia
+=================================
+
+O SAF controla o estoque da farmácia: medicamentos, lotes, entradas, saídas e o histórico.
+Ele funciona só neste computador e não precisa de internet para o dia a dia.
+
+
+1. INSTALAR
+-----------
+
+1. Crie a pasta  C:\SAF  e coloque o arquivo  SAF.exe  dentro dela.
+2. Dê dois cliques em  SAF.exe.
+3. Na primeira vez, o Windows pode mostrar "O Windows protegeu o computador".
+   Clique em "Mais informações" e depois em "Executar assim mesmo".
+4. Para ter um atalho na área de trabalho: clique com o botão direito em SAF.exe,
+   "Enviar para", "Área de trabalho (criar atalho)". No Windows 11, clique antes em
+   "Mostrar mais opções".
+
+Não coloque o SAF em outra pasta depois de começar a usar: os dados ficam ao lado dele.
+
+
+2. PRIMEIRO ACESSO
+------------------
+
+1. Entre com o usuário  admin  e a senha  primeiro-acesso.
+2. Abre a página "Configure o administrador". Nela aparece a CHAVE DE SEGURANÇA.
+   - Clique em "Imprimir" e guarde a folha em lugar trancado, longe do computador.
+   - Sem essa chave, os nomes e as fotos de um backup não podem ser recuperados.
+   - Nunca envie a chave por e-mail, nem a salve no Google Drive.
+3. Marque "Imprimi a chave e guardei a folha" e informe seu nome, seu login e sua senha
+   (pelo menos 12 caracteres).
+4. Pronto: a partir daí você entra com o seu login. O login admin deixa de existir.
+5. Para quem só vai consultar: menu Usuários, perfil "Visualização".
+
+
+3. BACKUP NO GOOGLE DRIVE
+-------------------------
+
+O SAF guarda uma cópia do banco de dados a cada hora (e ao fechar) na pasta
+C:\SAF\dados\backups. O Google Drive leva essa cópia para fora do computador.
+
+1. Instale o "Google Drive para computador" e entre com a conta da farmácia.
+2. Abra as Preferências do Google Drive, "Meu computador", "Adicionar pasta".
+3. Adicione estas duas pastas, uma de cada vez, com "Sincronizar com o Google Drive":
+      C:\SAF\dados\backups
+      C:\SAF\dados\photos
+4. Não adicione a pasta C:\SAF inteira, nem C:\SAF\dados inteira.
+   E nunca coloque o arquivo chave.key no Drive.
+
+Deixe o Google Drive sempre aberto e conectado.
+
+
+4. ATUALIZAÇÕES
+---------------
+
+O SAF se atualiza sozinho pela internet.
+
+- Quando uma atualização é instalada, aparece "A versão ... já foi instalada".
+  Ela passa a valer quando o SAF abrir de novo, ou na hora, em "Reiniciar agora".
+- Atualizações maiores aparecem só para o administrador, em "Atualizar agora".
+  Clique quando o SAF puder fechar por um minuto: ele fecha e abre sozinho.
+
+
+5. NÃO FAÇA
+-----------
+
+- Não apague nem mova o arquivo  C:\SAF\chave.key  nem a pasta  C:\SAF\dados.
+- Não abra o SAF de dentro do arquivo .zip: extraia antes.
+
+
+6. PROBLEMAS
+------------
+
+- Esqueceu a senha: outro administrador redefine em Usuários, "Redefinir senha".
+  Se não houver outro administrador, fale com quem instalou o SAF.
+- O SAF diz que a chave não está ao lado dele: recoloque o arquivo chave.key em C:\SAF
+  (quem instalou pode recriá-lo com o texto da folha impressa).
+- Computador novo ou com defeito: fale com quem instalou o SAF. Com o backup do Drive e a
+  chave impressa, tudo volta como estava na última cópia.

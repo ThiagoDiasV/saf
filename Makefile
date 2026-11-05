@@ -38,11 +38,12 @@ scan:
 	build/windows.sh dist/scan/SAF.exe
 	$(call trivy,dist/scan)
 
-# The desktop app for the pharmacy's PC: dist/SAF-windows.zip holds the folder SAF with SAF.exe.
-# Unzipped to C:\, SAF keeps its key and data next to it in C:\SAF.
+# The desktop app for the pharmacy's PC: dist/SAF-windows.zip holds the folder SAF with SAF.exe and
+# LEIA-ME.txt. Unzipped to C:\, SAF keeps its key and data next to it in C:\SAF.
 windows:
 	VERSION=$(VERSION) build/windows.sh dist/SAF/SAF.exe
-	cd dist && rm -f SAF-windows.zip && zip -qr SAF-windows.zip SAF/SAF.exe
+	cp docs/LEIA-ME.txt dist/SAF/
+	cd dist && rm -f SAF-windows.zip && zip -qr SAF-windows.zip SAF/SAF.exe SAF/LEIA-ME.txt
 
 # The same app for an Apple Silicon Mac, to check builds (needs Xcode's Command Line Tools).
 # Its key and data go next to it, in dist/.
