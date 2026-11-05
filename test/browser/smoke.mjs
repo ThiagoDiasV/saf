@@ -28,7 +28,10 @@ const chrome = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${port}
 if (SHOTS) mkdirSync(SHOTS, { recursive: true });
 
 async function waitFor(what, probe) {
-  for (let i = 0; i < 75; i++) {
+  for (let i = 0; i < 150; i++) { // Chrome's first start on a fresh Windows machine is slow
+    for (const [name, proc] of [['chrome', chrome], ['saf', app]]) {
+      if (proc.exitCode !== null) throw new Error(`${name} exited with code ${proc.exitCode}`);
+    }
     try {
       const value = await probe();
       if (value) return value;

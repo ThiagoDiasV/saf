@@ -41,7 +41,7 @@ jobs:
           $saf = Start-Process -FilePath .\dist\SAF\SAF.exe -PassThru
           try {
           $peers = @()
-          foreach ($i in 1..40) {
+          foreach ($i in 1..90) { # WebView2's first start on a fresh machine can be slow
             Start-Sleep -Seconds 1
             if ($saf.HasExited) { throw "SAF.exe exited with code $($saf.ExitCode)" }
             $port = (Get-NetTCPConnection -OwningProcess $saf.Id -State Listen -ErrorAction SilentlyContinue).LocalPort
