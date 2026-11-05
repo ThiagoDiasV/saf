@@ -22,6 +22,9 @@
       {{- end}}
       <button class="btn btn-primary btn-block" type="submit">Entrar</button>
       <p class="hint center">Esqueceu a senha? Fale com o administrador.</p>
+      {{- with .Version}}
+      <p class="hint center">Versão {{.}}</p>
+      {{- end}}
     </div>
   </form>
 </div>

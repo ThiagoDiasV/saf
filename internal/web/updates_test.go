@@ -89,6 +89,7 @@ func TestInstalledVersionOffersARestartToAnyone(t *testing.T) {
 	page := app.get("/estoque", viewer).Body.String()
 	assert.Contains(t, page, "A versão 1.3.0 do SAF já foi instalada")
 	assert.Contains(t, page, "SAF 1.2.0", "the running version, in the user menu")
+	assert.Contains(t, app.get("/login").Body.String(), "Versão 1.2.0", "and on the login page")
 
 	require.Equal(t, http.StatusSeeOther, app.post("/reiniciar", nil, viewer).Code)
 	assert.Len(t, restarted, 1)
