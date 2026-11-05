@@ -1,0 +1,2250 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SAF · Serviço de Apoio à Farmácia (protótipo)</title>
+<script>try { const t = localStorage.getItem('saf-tema'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
+<style>
+/* Tokens: one definition per colour; light-dark() picks the theme.
+   color-scheme follows the device, data-theme on <html> overrides it.
+   Palette from unilab.edu.br (tema.min.css, --cor-tema-tonalidade-*). */
+:root {
+  --bg: #F5F6F9;
+  --surface: #FFFFFF;
+  --surface-2: #F0F1F5;
+  --border: #DDDFE4;
+  --border-strong: #8A8D93;
+  --text: #3A3B3C;
+  --text-muted: #5F6368;
+  --accent: #A02D34;
+  --accent-hover: #6D1F26;
+  --accent-soft: #F7E9EA;
+  --on-accent: #FFFFFF;
+  --header-bg: #6D1F26;
+  /* Status colours are semantic only and always ship with an icon and text. */
+  --danger: #D93025;
+  --danger-text: #A50E0E;
+  --danger-bg: #FDECEA;
+  --on-danger: #FFFFFF;
+  --warn: #E37400;
+  --warn-text: #8A5300;
+  --warn-bg: #FEF3E0;
+  --ok-text: #1E7B34;
+  --ok-bg: #E6F4EA;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow: 0 1px 2px rgb(0 0 0 / .06), 0 2px 8px rgb(0 0 0 / .05);
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+@supports (color: light-dark(#000, #fff)) {
+  :root {
+    color-scheme: light dark;
+    --bg: light-dark(#F5F6F9, #141316);
+    --surface: light-dark(#FFFFFF, #1E1C20);
+    --surface-2: light-dark(#F0F1F5, #28252B);
+    --border: light-dark(#DDDFE4, #36323A);
+    --border-strong: light-dark(#8A8D93, #7A7480);
+    --text: light-dark(#3A3B3C, #ECE9EE);
+    --text-muted: light-dark(#5F6368, #B3ADB6);
+    --accent: light-dark(#A02D34, #DFA6A9);
+    --accent-hover: light-dark(#6D1F26, #EBC3C5);
+    --accent-soft: light-dark(#F7E9EA, #3A2226);
+    --on-accent: light-dark(#FFFFFF, #3B0304);
+    --header-bg: light-dark(#6D1F26, #2B0A0F);
+    /* Status colours are semantic only and always ship with an icon and text. */
+    --danger: light-dark(#D93025, #F28B82);
+    --danger-text: light-dark(#A50E0E, #F2B8B5);
+    --danger-bg: light-dark(#FDECEA, #3D1A1A);
+    --on-danger: light-dark(#FFFFFF, #3B0304);
+    --warn: light-dark(#E37400, #FDD663);
+    --warn-text: light-dark(#8A5300, #F6C36B);
+    --warn-bg: light-dark(#FEF3E0, #3A2C12);
+    --ok-text: light-dark(#1E7B34, #81C995);
+    --ok-bg: light-dark(#E6F4EA, #17301E);
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow: 0 1px 2px rgb(0 0 0 / .06), 0 2px 8px rgb(0 0 0 / .05);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; font: 16px/1.5 var(--font); background: var(--bg); color: var(--text); }
+h1, h2, h3 { margin: 0; line-height: 1.25; }
+h1 { font-size: 1.5rem; }
+h2 { font-size: 1.125rem; }
+p, ul, ol { margin: 0; }
+a { color: var(--accent); }
+a:hover { color: var(--accent-hover); }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.num, .tnum { font-variant-numeric: tabular-nums; }
+.center { text-align: center; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.icon { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.skip { position: absolute; left: 8px; top: -60px; z-index: 100; background: var(--surface); color: var(--text); padding: 8px 12px; border-radius: var(--radius-sm); }
+.skip:focus { top: 8px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* ---------- Prototype bar (not part of SAF) ---------- */
+.proto-bar { background: #2D2D30; color: #FFFFFF; font-size: .875rem; color-scheme: dark; }
+.proto-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding: 8px 16px; }
+.proto-row .proto-note { opacity: .85; }
+.proto-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+.proto-bar button { min-height: 36px; padding: 2px 12px; border: 1px solid #77777C; border-radius: 6px; background: #3A3A3E; color: #FFFFFF; font: inherit; cursor: pointer; }
+.proto-bar button:hover { background: #4A4A4F; }
+.proto-actions button[aria-pressed="true"], .proto-actions button[aria-expanded="true"] { background: #FFFFFF; color: #2D2D30; }
+.proto-toggle { display: inline-flex; align-items: center; gap: 4px; }
+.proto-toggle .icon { width: 18px; height: 18px; transition: transform .15s; }
+.proto-bar.is-collapsed .proto-note, .proto-bar.is-collapsed .proto-actions, .proto-bar.is-collapsed .proto-guide { display: none !important; }
+.proto-bar.is-collapsed .proto-row { padding-block: 4px; }
+.proto-bar.is-collapsed .proto-toggle { margin-left: auto; }
+.proto-bar.is-collapsed .proto-toggle .icon { transform: rotate(180deg); }
+.proto-bar :focus-visible { outline-color: #FFFFFF; }
+.proto-guide { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px 32px; padding: 12px 16px 16px; border-top: 1px solid #45454A; }
+.proto-guide h2 { margin-bottom: 6px; font-size: .9375rem; }
+.proto-guide ul, .proto-guide ol { padding-left: 20px; }
+.proto-guide li + li { margin-top: 4px; }
+.proto-guide code { font: inherit; font-weight: 700; }
+
+/* ---------- App shell ---------- */
+.app { container: app / inline-size; min-height: 100vh; display: flex; flex-direction: column; background: var(--bg); }
+.app.phone { width: 390px; height: 844px; min-height: 0; margin: 24px auto; border: 1px solid var(--border-strong); border-radius: 28px; overflow: auto; box-shadow: 0 10px 40px rgb(0 0 0 / .25); }
+.app-header { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 8px; min-height: 60px; padding: 8px 12px 8px 16px; background: var(--header-bg); color: #FFFFFF; }
+.app-header :focus-visible { outline-color: #FFFFFF; }
+.brand { display: flex; align-items: center; gap: 12px; margin-right: auto; color: #FFFFFF; text-decoration: none; min-width: 0; }
+.brand:hover { color: #FFFFFF; }
+.brand-mark { flex: none; font-size: .75rem; font-weight: 800; letter-spacing: .08em; border: 2px solid currentColor; border-radius: 4px; padding: 1px 6px; }
+.brand-name { font-size: 1.125rem; font-weight: 700; }
+.brand-sub { font-size: .875rem; opacity: .9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.header-right { display: flex; align-items: center; gap: 4px; }
+.role-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: rgb(255 255 255 / .15); font-size: .8125rem; font-weight: 600; }
+.role-badge .icon { width: 16px; height: 16px; }
+.header-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; min-height: 44px; padding: 0 10px; border: 0; border-radius: var(--radius-sm); background: transparent; color: #FFFFFF; font: inherit; font-weight: 600; cursor: pointer; }
+.header-btn:hover { background: rgb(255 255 255 / .12); }
+
+.menu-wrap { position: relative; }
+.menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; min-width: 210px; padding: 6px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); box-shadow: 0 10px 30px rgb(0 0 0 / .2); }
+.menu a, .menu button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0 12px; border: 0; border-radius: var(--radius-sm); background: none; color: var(--text); font: inherit; font-weight: 500; text-decoration: none; cursor: pointer; }
+.menu a:hover, .menu button:hover { background: var(--surface-2); color: var(--text); }
+.menu-up { top: auto; bottom: calc(100% + 8px); }
+
+.tabs { position: sticky; top: 60px; z-index: 9; background: var(--surface); border-bottom: 1px solid var(--border); }
+.tabs ul { display: flex; gap: 4px; max-width: 1200px; margin: 0 auto; padding: 0 16px; list-style: none; }
+.tab, .more-btn { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 14px; border: 0; border-bottom: 3px solid transparent; background: none; color: var(--text-muted); font: inherit; font-weight: 600; text-decoration: none; cursor: pointer; transition: color .15s, border-color .15s; }
+.tab:hover, .more-btn:hover { color: var(--text); }
+.tab[aria-current="page"] { color: var(--accent); border-bottom-color: var(--accent); }
+.tabs .more { display: none; }
+
+main { flex: 1; width: 100%; max-width: 1200px; margin: 0 auto; padding: 24px 16px 48px; }
+.page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.page-head p { margin-top: 4px; color: var(--text-muted); font-size: .875rem; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+.card + .card, .card + form.card, form.card + .card { margin-top: 16px; }
+.card-pad { padding: 20px; }
+.clip { overflow: hidden; }
+.section-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.stack-lg > * + * { margin-top: 20px; }
+.empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px 16px; color: var(--text-muted); text-align: center; }
+.empty .icon { width: 28px; height: 28px; }
+
+/* ---------- Buttons ---------- */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font: inherit; font-weight: 600; text-decoration: none; cursor: pointer; transition: background-color .15s, border-color .15s; white-space: nowrap; }
+.btn:hover { background: var(--surface-2); color: var(--text); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: var(--on-accent); }
+.btn-danger { border-color: var(--danger); color: var(--danger-text); }
+.btn-danger:hover { background: var(--danger-bg); color: var(--danger-text); }
+.btn-danger-solid { background: var(--danger-text); border-color: var(--danger-text); color: var(--on-danger); }
+.btn-danger-solid:hover { background: var(--danger-text); color: var(--on-danger); filter: brightness(1.1); }
+.btn-ghost { border-color: transparent; background: transparent; color: var(--accent); }
+.btn-ghost:hover { background: var(--accent-soft); color: var(--accent-hover); }
+.btn[disabled], .btn[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
+.btn-icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); cursor: pointer; }
+.btn-icon:hover { background: var(--surface-2); color: var(--text); }
+.btn-block { width: 100%; }
+.link { padding: 0; border: 0; background: none; color: var(--accent); font: inherit; text-decoration: underline; cursor: pointer; }
+
+/* ---------- Forms ---------- */
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field-label, .field > span:first-child { font-size: .875rem; font-weight: 600; }
+.optional { font-weight: 400; color: var(--text-muted); }
+.hint { font-size: .8125rem; color: var(--text-muted); }
+input, select, textarea { width: 100%; min-height: 44px; padding: 8px 12px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font: inherit; }
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline-offset: 0; border-color: var(--accent); }
+input[disabled] { background: var(--surface-2); color: var(--text-muted); cursor: not-allowed; }
+[aria-invalid="true"] { border-color: var(--danger) !important; box-shadow: 0 0 0 1px var(--danger); }
+textarea { min-height: 88px; resize: vertical; }
+input[type="checkbox"], input[type="radio"] { width: 20px; height: 20px; min-height: 0; margin: 0; accent-color: var(--accent); }
+.check { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; }
+.field-error { display: flex; align-items: flex-start; gap: 6px; color: var(--danger-text); font-size: .875rem; font-weight: 600; text-align: left; white-space: normal; }
+.field-error .icon { width: 18px; height: 18px; margin-top: 1px; }
+.form-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); align-items: start; }
+.form-foot { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding: 16px 20px; border-top: 1px solid var(--border); }
+fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+legend { padding: 0; margin-bottom: 6px; font-size: .875rem; font-weight: 600; }
+.pw { position: relative; }
+.pw input { padding-right: 52px; }
+.pw .btn-icon { position: absolute; right: 0; top: 0; }
+
+.segmented { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); overflow: hidden; background: var(--surface); }
+.segmented label { position: relative; display: flex; }
+.segmented input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.segmented span { display: flex; align-items: center; gap: 6px; min-height: 42px; padding: 0 14px; font-weight: 600; cursor: pointer; border-left: 1px solid var(--border); }
+.segmented label:first-child > span { border-left: 0; }
+.segmented .count { padding: 0; border: 0; min-height: 0; font-weight: 500; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.segmented input:checked + span { background: var(--accent-soft); color: var(--accent); }
+.segmented input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: -3px; }
+
+/* ---------- Badges ---------- */
+.badge { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px 2px 8px; border-radius: 999px; font-size: .8125rem; font-weight: 700; line-height: 1.6; white-space: nowrap; }
+.badge .icon { width: 16px; height: 16px; }
+.badge-danger { background: var(--danger-bg); color: var(--danger-text); }
+.badge-warn { background: var(--warn-bg); color: var(--warn-text); }
+.badge-ok { background: var(--ok-bg); color: var(--ok-text); }
+.badge-neutral { background: var(--surface-2); color: var(--text-muted); }
+
+/* ---------- Tables (stack into cards at phone width) ---------- */
+table.data { width: 100%; border-collapse: collapse; }
+.data th { padding: 8px 16px; background: var(--surface-2); color: var(--text-muted); font-size: .8125rem; font-weight: 600; text-align: left; white-space: nowrap; }
+.data td { padding: 10px 16px; border-top: 1px solid var(--border); vertical-align: middle; }
+.data .num { text-align: right; }
+.data tr.is-expired td { background: var(--danger-bg); }
+.data tr.is-expired td:first-child { box-shadow: inset 4px 0 0 var(--danger); }
+.data tr.is-expiring td:first-child { box-shadow: inset 4px 0 0 var(--warn); }
+.data tr.is-reversed td { color: var(--text-muted); }
+.data td.actions-cell { text-align: right; white-space: nowrap; }
+.data td.actions-cell .actions { justify-content: flex-end; }
+.cell-sub { display: block; font-size: .8125rem; color: var(--text-muted); }
+
+/* ---------- Estoque ---------- */
+.filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px; padding: 16px; margin-bottom: 16px; }
+.filters .field { flex: 1 1 220px; }
+.med { overflow: hidden; }
+.med + .med { margin-top: 12px; }
+.med-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 16px; padding: 14px 16px; }
+.med summary { list-style: none; cursor: pointer; transition: background-color .15s; }
+.med summary::-webkit-details-marker { display: none; }
+.med summary:hover { background: var(--surface-2); }
+.med summary:focus-visible { outline-offset: -3px; }
+.med-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.chev, .chev-space { width: 20px; flex: none; }
+.chev { color: var(--text-muted); transform: rotate(90deg); transition: transform .15s; }
+.med[open] .chev { transform: rotate(180deg); }
+.med-side { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px 14px; margin-left: auto; }
+.med-count { color: var(--text-muted); font-size: .875rem; white-space: nowrap; }
+.list-toolbar { display: flex; justify-content: flex-end; margin: -6px 0 8px; }
+.med-name { font-size: 1.0625rem; font-weight: 700; }
+.med-meta { color: var(--text-muted); font-weight: 500; }
+.med-total { text-align: right; font-size: 1.0625rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stock-table { table-layout: fixed; }
+.stock-table th:nth-child(1) { width: 16%; }
+.stock-table th:nth-child(2) { width: 24%; }
+.stock-table th:nth-child(3) { width: 14%; }
+.stock-table th:nth-child(4) { width: 14%; }
+.stock-table th:nth-child(6) { width: 68px; }
+.med-total small { display: block; font-size: .8125rem; font-weight: 500; color: var(--text-muted); }
+
+/* ---------- Entry lines ---------- */
+.lines-head, .line { display: grid; grid-template-columns: minmax(220px, 2.4fr) minmax(90px, 1fr) minmax(120px, 1.3fr) 120px 180px 44px; gap: 8px; align-items: start; }
+.lines-head { padding-bottom: 6px; font-size: .8125rem; font-weight: 600; color: var(--text-muted); }
+.line { padding: 10px 0; border-top: 1px solid var(--border); }
+.line .cell { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.cell-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.line-errors { grid-column: 1 / -1; display: grid; gap: 4px; }
+.qty { display: flex; align-items: center; gap: 8px; }
+.qty input { width: 96px; text-align: right; }
+.unit { color: var(--text-muted); font-size: .875rem; white-space: nowrap; }
+
+/* ---------- Exit lines (FEFO) ---------- */
+.exit-line { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.exit-line + .exit-line { margin-top: 16px; }
+.exit-line-head { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px; padding: 16px; }
+.exit-line-head .field.grow { flex: 1 1 260px; }
+.exit-line-head .btn-icon { margin-top: 26px; }
+.fefo-hint { padding: 0 16px 12px; }
+.fefo-empty { display: flex; align-items: center; gap: 8px; padding: 0 16px 16px; color: var(--text-muted); }
+.take-wrap { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.take { width: 96px; text-align: right; }
+.sum { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--border); font-weight: 700; font-variant-numeric: tabular-nums; }
+.sum-ok { background: var(--ok-bg); color: var(--ok-text); }
+.sum-warn { background: var(--warn-bg); color: var(--warn-text); }
+.sum-neutral { color: var(--text-muted); }
+
+/* ---------- Photos ---------- */
+.photos { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
+.thumb { position: relative; width: 112px; margin: 0; }
+.thumb-img { display: flex; align-items: center; justify-content: center; width: 112px; height: 112px; padding: 0; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); overflow: hidden; cursor: zoom-in; }
+.thumb-img img { width: 100%; height: 100%; object-fit: cover; }
+.thumb figcaption { margin-top: 4px; font-size: .8125rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.thumb .remove-photo { position: absolute; top: 4px; right: 4px; border-radius: 999px; background: rgb(0 0 0 / .6); color: #FFFFFF; }
+.thumb .remove-photo:hover { background: rgb(0 0 0 / .8); color: #FFFFFF; }
+.photo-add { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; width: 112px; height: 112px; padding: 8px; border: 2px dashed var(--border-strong); border-radius: var(--radius-sm); color: var(--accent); font-size: .875rem; font-weight: 600; text-align: center; cursor: pointer; }
+.photo-add:hover { background: var(--accent-soft); }
+.photo-add:focus-within { outline: 3px solid var(--accent); outline-offset: 2px; }
+.photo-add input { position: absolute; inset: 0; opacity: 0; width: 1px; height: 1px; }
+
+/* ---------- History ---------- */
+.mv { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; white-space: nowrap; }
+.mv .icon { width: 18px; height: 18px; }
+.pager { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; margin-top: 16px; }
+.pager button { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 0 12px; border: 0; border-radius: var(--radius-sm); background: none; color: var(--text); font: inherit; font-weight: 600; cursor: pointer; }
+.pager button:hover { background: var(--surface-2); }
+.pager button[aria-current="page"] { background: var(--accent); color: var(--on-accent); }
+.pager button[disabled] { opacity: .4; cursor: default; }
+
+/* ---------- Dialogs ---------- */
+dialog { width: min(520px, calc(100% - 32px)); max-height: calc(100% - 32px); padding: 0; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+dialog.wide { width: min(820px, calc(100% - 32px)); }
+dialog::backdrop { background: rgb(0 0 0 / .5); }
+.dlg-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px 12px 16px 20px; border-bottom: 1px solid var(--border); }
+.dlg-head p { margin-top: 2px; color: var(--text-muted); font-size: .875rem; }
+.dlg-body { display: grid; gap: 24px; padding: 20px; }
+.dlg-body h3 { margin-bottom: 8px; font-size: .9375rem; }
+.dlg-body ul { padding-left: 20px; }
+.dlg-body li + li { margin-top: 4px; }
+.dlg-foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--border); }
+dl.meta { display: grid; grid-template-columns: max-content 1fr; gap: 6px 20px; margin: 0; }
+dl.meta dt { color: var(--text-muted); font-size: .875rem; }
+dl.meta dd { margin: 0; }
+.log { margin: 0; padding: 0 !important; list-style: none; }
+.log li { padding: 8px 0; border-top: 1px solid var(--border); font-size: .875rem; }
+.log li:first-child { border-top: 0; }
+.log time { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.inline-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.inline-row h3 { margin: 0; }
+.note-text { white-space: pre-wrap; }
+dialog.photo-viewer { width: min(960px, calc(100% - 32px)); }
+.photo-viewer img { display: block; max-width: 100%; max-height: calc(100vh - 160px); margin: 0 auto; }
+
+/* ---------- Toasts ---------- */
+.toasts { position: fixed; inset: auto auto 24px 50%; z-index: 50; display: flex; flex-direction: column; gap: 8px; width: min(520px, calc(100% - 32px)); height: auto; margin: 0; padding: 0; border: 0; background: transparent; overflow: visible; transform: translateX(-50%); pointer-events: none; }
+.toast { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: var(--radius); background: #2D2D30; color: #FFFFFF; box-shadow: 0 10px 30px rgb(0 0 0 / .3); pointer-events: auto; animation: toast-in .2s ease-out; }
+.toast-error { background: #8C1D18; }
+.toast span { flex: 1; }
+.toast-action { min-height: 36px; padding: 0 12px; border: 1px solid rgb(255 255 255 / .5); border-radius: var(--radius-sm); background: none; color: #FFFFFF; font: inherit; font-weight: 700; cursor: pointer; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* ---------- Login ---------- */
+.app.is-login .tabs, .app.is-login .header-right { display: none; }
+.login-wrap { display: grid; place-items: center; min-height: min(70vh, 640px); }
+.login-card { width: min(400px, 100%); }
+.brand-block { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 24px; text-align: center; }
+.brand-block .brand-mark { color: var(--accent); font-size: .875rem; }
+
+/* ---------- Roles ---------- */
+.app[data-role="viewer"] .admin-only { display: none !important; }
+.app:not([data-role="viewer"]) .viewer-only { display: none !important; }
+
+/* ---------- Phone width ---------- */
+@container app (max-width: 760px) {
+  .lines-head { display: none; }
+  .line { grid-template-columns: 1fr 1fr; padding: 14px 0; }
+  .line .cell-med, .line .cell-qty { grid-column: 1 / -1; }
+  .line .remove-line { grid-column: 1 / -1; justify-self: end; }
+  .cell-label { position: static; width: auto; height: auto; margin: 0; overflow: visible; clip: auto; white-space: normal; font-size: .8125rem; font-weight: 600; }
+}
+@container app (max-width: 640px) {
+  .tabs { order: 1; top: auto; bottom: 0; border-top: 1px solid var(--border); border-bottom: 0; }
+  .tabs ul { gap: 0; padding: 0; }
+  .tabs li { flex: 1; }
+  .tab, .more-btn { flex-direction: column; gap: 2px; width: 100%; min-height: 62px; padding: 6px 2px; font-size: .8125rem; border-bottom: 0; border-top: 3px solid transparent; }
+  .tab[aria-current="page"] { border-top-color: var(--accent); }
+  .tabs .desk-only { display: none; }
+  .tabs .more { display: block; }
+  .brand-sub, .user-name, .role-text { display: none; }
+  main { padding: 16px 12px 32px; }
+  h1 { font-size: 1.3125rem; }
+  .card-pad { padding: 16px; }
+  .page-head .actions { width: 100%; }
+  .page-head .actions .btn { flex: 1 1 auto; }
+  .data.stack thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .data.stack, .data.stack tbody, .data.stack tr, .data.stack td { display: block; }
+  .data.stack tr { padding: 10px 16px; border-top: 1px solid var(--border); }
+  .data.stack td { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 3px 0; border: 0; text-align: right; }
+  .data.stack td::before { content: attr(data-label); color: var(--text-muted); font-size: .8125rem; font-weight: 600; text-align: left; }
+  .data.stack td.actions-cell { justify-content: flex-end; }
+  .data.stack td.actions-cell::before { content: none; }
+  .data.stack tr.is-expired { background: var(--danger-bg); box-shadow: inset 4px 0 0 var(--danger); }
+  .data.stack tr.is-expiring { box-shadow: inset 4px 0 0 var(--warn); }
+  .data.stack tr td, .data.stack tr.is-expired td { background: none; box-shadow: none; }
+  .dlg-foot .btn { flex: 1 1 auto; }
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-box" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></symbol>
+  <symbol id="i-in" viewBox="0 0 24 24"><line x1="12" y1="4" x2="12" y2="16"/><polyline points="7 11 12 16 17 11"/><line x1="5" y1="20" x2="19" y2="20"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24"><line x1="12" y1="20" x2="12" y2="8"/><polyline points="7 13 12 8 17 13"/><line x1="5" y1="4" x2="19" y2="4"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+  <symbol id="i-pill" viewBox="0 0 24 24"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="i-expired" viewBox="0 0 24 24"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></symbol>
+  <symbol id="i-archive" viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+</svg>
+
+<datalist id="dl-meds"></datalist>
+<datalist id="dl-fabricantes"></datalist>
+<datalist id="dl-ativos"></datalist>
+<datalist id="dl-formas"></datalist>
+<datalist id="dl-unidades"></datalist>
+
+<div class="proto-bar" role="region" aria-label="Sobre este protótipo">
+  <div class="proto-row">
+    <strong>Protótipo do SAF</strong>
+    <span class="proto-note">para validação. Os dados ficam só neste navegador. Use nomes fictícios.</span>
+    <span class="proto-actions">
+      <button type="button" data-action="proto-guide" aria-expanded="false" aria-controls="proto-guide">Como testar</button>
+      <button type="button" data-action="proto-phone" aria-pressed="false">Ver como celular</button>
+      <button type="button" data-action="proto-reset">Restaurar dados de exemplo</button>
+    </span>
+    <button type="button" class="proto-toggle" data-action="proto-collapse" aria-expanded="true" aria-label="Ocultar barra do protótipo">
+      <svg class="icon" aria-hidden="true"><use href="#i-chevron"/></svg><span class="proto-toggle-text">Ocultar</span>
+    </button>
+  </div>
+  <div class="proto-guide" id="proto-guide" hidden>
+    <div>
+      <h2>Logins de teste</h2>
+      <ul>
+        <li><code>paulo.mendes</code> · senha <code>farmacia2026</code> · administrador</li>
+        <li><code>thiago.dias</code> · senha <code>farmacia2026</code> · só visualiza</li>
+      </ul>
+    </div>
+    <div>
+      <h2>Roteiro sugerido</h2>
+      <ol>
+        <li>Entre como Paulo e veja o Estoque: abra um medicamento para ver os lotes vencidos e vencendo.</li>
+        <li>Registre uma Entrada com dois medicamentos e uma foto.</li>
+        <li>Faça uma Saída de Dipirona: os lotes vêm preenchidos pela menor validade.</li>
+        <li>No Histórico, abra a saída, edite a observação e estorne.</li>
+        <li>Cadastre um medicamento novo e tente arquivar um que tem estoque.</li>
+        <li>Saia e entre como Thiago: ele só vê Estoque e Histórico.</li>
+      </ol>
+    </div>
+    <div>
+      <h2>O que precisamos validar</h2>
+      <ul>
+        <li>Faltam campos na entrada ou na saída?</li>
+        <li>Os tipos de entrada e saída estão certos?</li>
+        <li>Falta informação no estoque ou no histórico?</li>
+        <li>Algo ficou confuso, no computador ou no celular?</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="app" id="app">
+  <a class="skip" href="#conteudo">Pular para o conteúdo</a>
+
+  <header class="app-header">
+    <a class="brand" href="#estoque">
+      <span class="brand-mark">UNILAB</span>
+      <span class="brand-name">SAF</span>
+      <span class="brand-sub">Serviço de Apoio à Farmácia</span>
+    </a>
+    <div class="header-right">
+      <span class="role-badge viewer-only">
+        <svg class="icon" aria-hidden="true"><use href="#i-eye"/></svg><span class="role-text">Somente visualização</span>
+      </span>
+      <button type="button" class="header-btn" id="theme-toggle" data-action="toggle-theme" aria-label="Usar tema escuro">
+        <svg class="icon" aria-hidden="true"><use href="#i-moon"/></svg>
+      </button>
+      <div class="menu-wrap">
+        <button type="button" class="header-btn" data-action="toggle-menu" aria-controls="user-menu" aria-expanded="false" aria-haspopup="true">
+          <svg class="icon" aria-hidden="true"><use href="#i-user"/></svg><span class="user-name" id="user-name"></span>
+        </button>
+        <div class="menu" id="user-menu" hidden>
+          <button type="button" data-action="change-own-password"><svg class="icon" aria-hidden="true"><use href="#i-key"/></svg>Alterar minha senha</button>
+          <button type="button" data-action="logout"><svg class="icon" aria-hidden="true"><use href="#i-logout"/></svg>Sair</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="Seções">
+    <ul>
+      <li><a class="tab" href="#estoque" data-screen="estoque"><svg class="icon" aria-hidden="true"><use href="#i-box"/></svg>Estoque</a></li>
+      <li class="admin-only"><a class="tab" href="#entrada" data-screen="entrada"><svg class="icon" aria-hidden="true"><use href="#i-in"/></svg>Entrada</a></li>
+      <li class="admin-only"><a class="tab" href="#saida" data-screen="saida"><svg class="icon" aria-hidden="true"><use href="#i-out"/></svg>Saída</a></li>
+      <li><a class="tab" href="#historico" data-screen="historico"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>Histórico</a></li>
+      <li class="admin-only desk-only"><a class="tab" href="#medicamentos" data-screen="medicamentos"><svg class="icon" aria-hidden="true"><use href="#i-pill"/></svg>Medicamentos</a></li>
+      <li class="admin-only desk-only"><a class="tab" href="#usuarios" data-screen="usuarios"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg>Usuários</a></li>
+      <li class="admin-only more menu-wrap">
+        <button type="button" class="more-btn" data-action="toggle-menu" aria-controls="more-menu" aria-expanded="false" aria-haspopup="true">
+          <svg class="icon" aria-hidden="true"><use href="#i-more"/></svg>Mais
+        </button>
+        <div class="menu menu-up" id="more-menu" hidden>
+          <a href="#medicamentos"><svg class="icon" aria-hidden="true"><use href="#i-pill"/></svg>Medicamentos</a>
+          <a href="#usuarios"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg>Usuários</a>
+        </div>
+      </li>
+    </ul>
+  </nav>
+
+  <main id="conteudo" tabindex="-1">
+    <section class="screen" id="screen-login" hidden></section>
+    <section class="screen" id="screen-estoque" hidden></section>
+    <section class="screen" id="screen-entrada" hidden></section>
+    <section class="screen" id="screen-saida" hidden></section>
+    <section class="screen" id="screen-historico" hidden></section>
+    <section class="screen" id="screen-medicamentos" hidden></section>
+    <section class="screen" id="screen-usuarios" hidden></section>
+  </main>
+</div>
+
+<dialog id="dlg-main"></dialog>
+<dialog id="dlg-confirm"></dialog>
+<dialog id="dlg-photo" class="photo-viewer"></dialog>
+<div class="toasts" id="toasts" popover="manual" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+
+// =====================================================================
+// Constants and helpers
+// =====================================================================
+const STORE_KEY = 'saf-prototipo-v2';
+const SESSION_KEY = 'saf-prototipo-sessao';
+const THEME_KEY = 'saf-tema';
+const PROTO_BAR_KEY = 'saf-prototipo-barra';
+const ENTRY_TYPES = ['Doação', 'Permuta', 'Abastecimento', 'Devolução', 'Saldo inicial', 'Outros'];
+const EXIT_TYPES = ['Dispensação', 'Perda', 'Extravio', 'Vencimento/Descarte', 'Permuta', 'Devolução ao fornecedor'];
+const DISPENSE = 'Dispensação';
+const DISCARD = 'Vencimento/Descarte';
+const EXPIRING_DAYS = 90;
+const PAGE_SIZE = 10;
+const MIN_PASSWORD = 12;
+const ADMIN_SCREENS = ['entrada', 'saida', 'medicamentos', 'usuarios'];
+
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const icon = name => `<svg class="icon" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+const pad2 = n => String(n).padStart(2, '0');
+const isoDate = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const today = () => isoDate(new Date());
+const nowIso = () => new Date().toISOString();
+const newId = prefix => prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const normalize = s => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+const compact = s => normalize(s).replace(/ /g, '');
+const byText = (a, b) => a.localeCompare(b, 'pt-BR');
+
+function shiftDays(days, hour = 9, minute = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  d.setHours(hour, minute, 0, 0);
+  return d;
+}
+function shiftMonths(months) {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + months);
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
+}
+const fmtDate = iso => { const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; };
+const fmtTime = iso => { const d = new Date(iso); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
+const fmtDateTime = iso => `${fmtDate(isoDate(new Date(iso)))} ${fmtTime(iso)}`;
+const fmtExpiry = ym => { const [y, m] = ym.split('-'); return `${m}/${y}`; };
+function parseExpiry(text) {
+  const match = /^(0[1-9]|1[0-2])\/(20\d\d)$/.exec(String(text).trim());
+  return match ? `${match[2]}-${match[1]}` : null;
+}
+// A batch is valid through the last day of its expiry month.
+function daysToExpiry(ym) {
+  const [y, m] = ym.split('-').map(Number);
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  return Math.round((new Date(y, m, 0) - start) / 86400000);
+}
+function expiryStatus(ym) {
+  const days = daysToExpiry(ym);
+  if (days < 0) return 'expired';
+  return days <= EXPIRING_DAYS ? 'expiring' : 'ok';
+}
+function relativeDateTime(iso) {
+  if (!iso) return 'nunca';
+  const day = isoDate(new Date(iso));
+  if (day === today()) return `hoje ${fmtTime(iso)}`;
+  if (day === isoDate(shiftDays(-1))) return `ontem ${fmtTime(iso)}`;
+  return fmtDateTime(iso);
+}
+function plural(unit, qty) {
+  if (Math.abs(qty) === 1) return unit;
+  if (/ão$/.test(unit)) return unit.replace(/ão$/, 'ões');
+  if (/[rz]$/.test(unit)) return unit + 'es';
+  if (/l$/.test(unit)) return unit.replace(/l$/, 'is');
+  if (/s$/.test(unit)) return unit;
+  return unit + 's';
+}
+const qtyText = (qty, unit) => `${Math.abs(qty)} ${plural(unit, qty)}`;
+function truncate(text, max) {
+  return text.length > max ? text.slice(0, max - 1) + '…' : text;
+}
+
+// =====================================================================
+// State: everything the prototype "saves" lives here and in localStorage
+// =====================================================================
+function fakeDocumentPhoto(title, lines) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 480;
+  canvas.height = 640;
+  const g = canvas.getContext('2d');
+  g.fillStyle = '#d9d2c3';
+  g.fillRect(0, 0, 480, 640);
+  g.translate(240, 320);
+  g.rotate(-0.035);
+  g.fillStyle = '#fffef8';
+  g.fillRect(-195, -285, 390, 570);
+  g.fillStyle = '#2f2f2f';
+  g.font = 'bold 26px sans-serif';
+  g.fillText(title, -160, -220);
+  g.font = '17px sans-serif';
+  lines.forEach((text, i) => g.fillText(text, -160, -170 + i * 32));
+  g.strokeStyle = '#c9c9c9';
+  for (let y = -170 + lines.length * 32 + 10; y < 230; y += 30) {
+    g.beginPath(); g.moveTo(-160, y); g.lineTo(160, y); g.stroke();
+  }
+  g.strokeStyle = '#3d5a99';
+  g.lineWidth = 2;
+  g.beginPath(); g.moveTo(40, 245); g.bezierCurveTo(70, 215, 100, 270, 150, 235); g.stroke();
+  return canvas.toDataURL('image/jpeg', 0.6);
+}
+
+function seedState() {
+  const at = (days, hour, minute) => shiftDays(days, hour, minute).toISOString();
+  const day = days => isoDate(shiftDays(days));
+  const photo = (name, title, lines, days, hour) => ({ id: newId('p'), name, dataUrl: fakeDocumentPhoto(title, lines), addedAt: at(days, hour, 0) });
+  const tx = fields => ({ recipient: '', note: '', photos: [], lines: [], edits: [], ...fields });
+  return {
+    version: 1,
+    users: [
+      { id: 'u1', name: 'Paulo Mendes', login: 'paulo.mendes', password: 'farmacia2026', role: 'admin', active: true, lastLogin: at(-1, 8, 2) },
+      { id: 'u2', name: 'Thiago Dias', login: 'thiago.dias', password: 'farmacia2026', role: 'viewer', active: true, lastLogin: at(-1, 17, 42) },
+    ],
+    medicines: [
+      { id: 'm1', ingredient: 'Dipirona', strength: '500 mg', dosageForm: 'Comprimido', unit: 'comprimido', archived: false },
+      { id: 'm2', ingredient: 'Amoxicilina', strength: '500 mg', dosageForm: 'Cápsula', unit: 'cápsula', archived: false },
+      { id: 'm3', ingredient: 'Ibuprofeno', strength: '50 mg/mL', dosageForm: 'Suspensão oral', unit: 'frasco', archived: false },
+      { id: 'm4', ingredient: 'Losartana potássica', strength: '50 mg', dosageForm: 'Comprimido', unit: 'comprimido', archived: false },
+      { id: 'm5', ingredient: 'Paracetamol', strength: '750 mg', dosageForm: 'Comprimido', unit: 'comprimido', archived: false },
+      { id: 'm6', ingredient: 'Cetoconazol', strength: '20 mg/g', dosageForm: 'Creme', unit: 'bisnaga', archived: false },
+      { id: 'm7', ingredient: 'Captopril', strength: '25 mg', dosageForm: 'Comprimido', unit: 'comprimido', archived: true },
+    ],
+    batches: [
+      { id: 'b1', medicineId: 'm1', lot: 'X999', manufacturer: 'EMS', expiry: shiftMonths(-2) },
+      { id: 'b2', medicineId: 'm1', lot: 'B777', manufacturer: 'Medley', expiry: shiftMonths(1) },
+      { id: 'b3', medicineId: 'm1', lot: 'A123', manufacturer: 'EMS', expiry: shiftMonths(6) },
+      { id: 'b4', medicineId: 'm2', lot: 'K12', manufacturer: 'Teuto', expiry: shiftMonths(2) },
+      { id: 'b5', medicineId: 'm2', lot: 'K44', manufacturer: 'Teuto', expiry: shiftMonths(10) },
+      { id: 'b6', medicineId: 'm3', lot: 'L2201', manufacturer: 'Prati-Donaduzzi', expiry: shiftMonths(19) },
+      { id: 'b7', medicineId: 'm4', lot: 'LS90', manufacturer: 'Neo Química', expiry: shiftMonths(15) },
+      { id: 'b8', medicineId: 'm5', lot: 'P750', manufacturer: 'EMS', expiry: shiftMonths(8) },
+      { id: 'b9', medicineId: 'm7', lot: 'C25', manufacturer: 'Medley', expiry: shiftMonths(-6) },
+    ],
+    transactions: [
+      tx({ id: 't1', kind: 'in', type: 'Saldo inicial', date: day(-30), createdAt: at(-30, 8, 30), userId: 'u1', note: 'Saldo inicial importado da planilha.',
+        lines: [{ batchId: 'b1', qty: 10 }, { batchId: 'b2', qty: 20 }, { batchId: 'b3', qty: 40 }, { batchId: 'b4', qty: 60 }, { batchId: 'b5', qty: 84 }, { batchId: 'b6', qty: 14 }, { batchId: 'b7', qty: 330 }, { batchId: 'b8', qty: 20 }, { batchId: 'b9', qty: 20 }] }),
+      tx({ id: 't2', kind: 'out', type: 'Vencimento/Descarte', date: day(-25), createdAt: at(-25, 10, 15), userId: 'u1', note: 'Lote vencido recolhido para descarte.', lines: [{ batchId: 'b9', qty: -20 }] }),
+      tx({ id: 't3', kind: 'adjust', type: 'Ajuste de lote', target: 'batch', refId: 'b7', date: day(-5), createdAt: at(-5, 11, 20), userId: 'u1',
+        changes: [{ field: 'Validade', from: fmtExpiry(shiftMonths(14)), to: fmtExpiry(shiftMonths(15)) }] }),
+      tx({ id: 't4', kind: 'out', type: DISPENSE, date: day(-3), createdAt: at(-3, 15, 30), userId: 'u1', recipient: 'Pedro A.', lines: [{ batchId: 'b8', qty: -20 }] }),
+      tx({ id: 't5', kind: 'out', type: 'Perda', date: day(-2), createdAt: at(-1, 8, 5), userId: 'u1', note: 'Frasco quebrado na prateleira.', lines: [{ batchId: 'b6', qty: -1 }],
+        photos: [photo('frasco.jpg', 'REGISTRO DE PERDA', ['Ibuprofeno 50 mg/mL', 'Lote L2201', '1 frasco quebrado'], -1, 8)] }),
+      tx({ id: 't6', kind: 'out', type: DISPENSE, date: day(-1), createdAt: at(-1, 14, 2), userId: 'u1', recipient: 'Carla M.', lines: [{ batchId: 'b3', qty: -30 }], reversedById: 't7',
+        photos: [photo('receita-carla.jpg', 'RECEITA', ['Paciente: Carla M.', 'Dipirona 500 mg', '30 comprimidos'], -1, 14)] }),
+      tx({ id: 't7', kind: 'reversal', type: 'Estorno de saída', date: day(-1), createdAt: at(-1, 14, 10), userId: 'u1', reversesId: 't6', lines: [{ batchId: 'b3', qty: 30 }] }),
+      tx({ id: 't8', kind: 'in', type: 'Doação', date: day(-1), createdAt: at(-1, 16, 40), userId: 'u1', note: 'Doação da Clínica Escola de Saúde.', lines: [{ batchId: 'b3', qty: 200 }],
+        photos: [photo('nota_p1.jpg', 'NOTA DE DOAÇÃO', ['Clínica Escola de Saúde', 'Dipirona 500 mg - 200 cp', 'Lote A123'], -1, 16)] }),
+      tx({ id: 't9', kind: 'out', type: DISPENSE, date: day(0), createdAt: at(0, 9, 12), userId: 'u1', recipient: 'João S.', note: 'Receita Dr. A. Lima, UBS Centro.',
+        lines: [{ batchId: 'b7', qty: -30 }, { batchId: 'b6', qty: -1 }],
+        photos: [photo('receita.jpg', 'RECEITA', ['Paciente: João S.', 'Losartana 50 mg - 30 cp', 'Ibuprofeno susp. - 1 fr'], 0, 9)],
+        edits: [{ at: at(0, 10, 2), userId: 'u1', field: 'Observação', from: '', to: 'Receita Dr. A. Lima, UBS Centro.' }] }),
+    ],
+  };
+}
+
+function loadState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE_KEY));
+    return saved && saved.version === 1 ? saved : null;
+  } catch (e) {
+    return null;
+  }
+}
+function persist() {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify(state));
+  } catch (e) {
+    toast('O navegador ficou sem espaço para este protótipo. Remova algumas fotos ou restaure os dados de exemplo.', 'error');
+  }
+}
+
+const firstVisit = !loadState();
+let state = loadState() || seedState();
+if (firstVisit) persist();
+
+const medicineById = id => state.medicines.find(m => m.id === id);
+const batchById = id => state.batches.find(b => b.id === id);
+const userById = id => state.users.find(u => u.id === id);
+const txById = id => state.transactions.find(t => t.id === id);
+const medicineLabel = m => `${m.ingredient} ${m.strength} ${m.dosageForm.toLocaleLowerCase('pt-BR')}`;
+const medicineKey = values => compact(`${values.ingredient} ${values.strength} ${values.dosageForm}`);
+const batchKey = (medicineId, lot, manufacturer) => `${medicineId}|${compact(lot)}|${compact(manufacturer)}`;
+const activeMedicines = () => state.medicines.filter(m => !m.archived).sort((a, b) => byText(medicineLabel(a), medicineLabel(b)));
+const findActiveMedicine = text => activeMedicines().find(m => normalize(medicineLabel(m)) === normalize(text));
+
+// Stock is never stored: it is the sum of every movement line of the batch.
+function stockByBatch() {
+  const stock = new Map();
+  for (const t of state.transactions) {
+    for (const line of t.lines) stock.set(line.batchId, (stock.get(line.batchId) || 0) + line.qty);
+  }
+  return stock;
+}
+function medicineStock(medicineId, stock) {
+  return state.batches.filter(b => b.medicineId === medicineId).reduce((sum, b) => sum + (stock.get(b.id) || 0), 0);
+}
+function medicineHasMovements(medicineId) {
+  const ids = new Set(state.batches.filter(b => b.medicineId === medicineId).map(b => b.id));
+  return state.transactions.some(t => t.lines.some(l => ids.has(l.batchId)));
+}
+function currentUser() {
+  const user = userById(localStorage.getItem(SESSION_KEY));
+  return user && user.active ? user : null;
+}
+const isAdmin = () => currentUser()?.role === 'admin';
+
+function addAdjustment(target, refId, changes) {
+  state.transactions.push({
+    id: newId('t'), kind: 'adjust', type: target === 'batch' ? 'Ajuste de lote' : 'Ajuste de medicamento', target, refId,
+    date: today(), createdAt: nowIso(), userId: currentUser().id, recipient: '', note: '', photos: [], lines: [], changes, edits: [],
+  });
+}
+
+// Every change goes through here: save, refresh suggestions, redraw the current screen.
+function commit(message) {
+  persist();
+  refreshDatalists();
+  renderCurrent();
+  if (message) toast(message);
+}
+
+function refreshDatalists() {
+  const options = values => [...new Set(values.filter(Boolean))].sort(byText).map(v => `<option value="${esc(v)}">`).join('');
+  $('#dl-meds').innerHTML = options(activeMedicines().map(medicineLabel));
+  $('#dl-fabricantes').innerHTML = options(state.batches.map(b => b.manufacturer));
+  $('#dl-ativos').innerHTML = options(state.medicines.map(m => m.ingredient));
+  $('#dl-formas').innerHTML = options(['Comprimido', 'Comprimido revestido', 'Cápsula', 'Drágea', 'Solução oral', 'Suspensão oral', 'Xarope', 'Gotas', 'Creme', 'Pomada', 'Gel', 'Solução injetável', ...state.medicines.map(m => m.dosageForm)]);
+  $('#dl-unidades').innerHTML = options(['comprimido', 'cápsula', 'drágea', 'frasco', 'bisnaga', 'ampola', 'sachê', 'tubo', ...state.medicines.map(m => m.unit)]);
+}
+
+// =====================================================================
+// Shared UI pieces: toasts, dialogs, menus, field errors, photos, CSV
+// =====================================================================
+function toast(message, kind = 'ok', action) {
+  const el = document.createElement('div');
+  el.className = `toast toast-${kind}`;
+  el.innerHTML = `${icon(kind === 'error' ? 'alert' : 'check')}<span>${esc(message)}</span>`;
+  if (action) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'toast-action';
+    button.textContent = action.label;
+    button.addEventListener('click', () => { el.remove(); action.run(); });
+    el.append(button);
+  }
+  const box = $('#toasts');
+  if (kind === 'ok') $$('.toast-error', box).forEach(t => t.remove());
+  box.append(el);
+  while (box.children.length > 3) box.firstElementChild.remove();
+  // Re-showing the popover puts it above any open dialog.
+  if (box.showPopover) {
+    if (box.matches(':popover-open')) box.hidePopover();
+    box.showPopover();
+  }
+  setTimeout(() => {
+    el.remove();
+    if (!box.children.length && box.hidePopover && box.matches(':popover-open')) box.hidePopover();
+  }, action ? 8000 : 5000);
+}
+
+const closeButton = () => `<button type="button" class="btn-icon" data-action="close-dialog" aria-label="Fechar">${icon('x')}</button>`;
+function openDialog(html, size = '') {
+  const dialog = $('#dlg-main');
+  dialog.className = size;
+  dialog.innerHTML = html;
+  if (!dialog.open) dialog.showModal();
+  const isForm = dialog.firstElementChild?.matches('form');
+  ($('[autofocus]', dialog) || (isForm && $('input:not([type=file]), select, textarea', dialog)) || $('[data-action="close-dialog"]', dialog))?.focus();
+}
+function closeDialog() {
+  const dialog = $('#dlg-main');
+  if (dialog.open) dialog.close();
+}
+
+let confirmAction = null;
+function openConfirm({ title, body, confirmLabel = 'Confirmar', danger = false, onConfirm }) {
+  const dialog = $('#dlg-confirm');
+  const buttons = onConfirm
+    ? `<button type="button" class="btn" data-action="confirm-cancel">Cancelar</button>
+       <button type="button" class="btn ${danger ? 'btn-danger-solid' : 'btn-primary'}" data-action="confirm-ok">${esc(confirmLabel)}</button>`
+    : `<button type="button" class="btn btn-primary" data-action="confirm-cancel">Entendi</button>`;
+  dialog.innerHTML = `<div class="dlg-head"><h2>${esc(title)}</h2></div>
+    <div class="dlg-body">${body}</div>
+    <div class="dlg-foot"><span></span><div class="actions">${buttons}</div></div>`;
+  confirmAction = onConfirm || null;
+  dialog.showModal();
+}
+
+function toggleMenu(button) {
+  const menu = document.getElementById(button.getAttribute('aria-controls'));
+  const willOpen = menu.hidden;
+  closeMenus();
+  menu.hidden = !willOpen;
+  button.setAttribute('aria-expanded', String(willOpen));
+  if (willOpen) $('a, button', menu)?.focus();
+}
+function closeMenus() {
+  $$('.menu').forEach(menu => { menu.hidden = true; });
+  $$('[data-action="toggle-menu"]').forEach(b => b.setAttribute('aria-expanded', 'false'));
+}
+
+function clearErrors(form) {
+  $$('[aria-invalid]', form).forEach(el => el.removeAttribute('aria-invalid'));
+  $$('.field-error.js-error, .line-errors', form).forEach(el => el.remove());
+}
+function fieldError(input, message) {
+  input.setAttribute('aria-invalid', 'true');
+  const error = document.createElement('p');
+  error.className = 'field-error js-error';
+  error.innerHTML = icon('alert') + esc(message);
+  const line = input.closest('.line');
+  if (line) {
+    let host = $('.line-errors', line);
+    if (!host) { host = document.createElement('div'); host.className = 'line-errors'; line.append(host); }
+    return host.append(error);
+  }
+  (input.closest('.field, .take-wrap') || input.parentElement).append(error);
+}
+function focusFirstInvalid(form) {
+  $('[aria-invalid="true"]', form)?.focus();
+}
+const field = (label, control, hint = '') =>
+  `<label class="field"><span>${label}</span>${control}${hint ? `<span class="hint">${hint}</span>` : ''}</label>`;
+
+// Photos: shrunk on a canvas before they are kept, like the real app will do before upload.
+const photoDrafts = { entrada: [], saida: [] };
+function shrinkPhoto(file, maxSide = 1000, quality = 0.6) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.naturalWidth * scale);
+      canvas.height = Math.round(img.naturalHeight * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error(`não foi possível ler ${file.name}`)); };
+    img.src = url;
+  });
+}
+async function addPhotos(input) {
+  const files = [...input.files];
+  input.value = '';
+  const added = [];
+  for (const file of files) {
+    if (!file.type.startsWith('image/')) { toast(`${file.name} não é uma imagem.`, 'error'); continue; }
+    try {
+      added.push({ id: newId('p'), name: file.name, dataUrl: await shrinkPhoto(file), addedAt: nowIso() });
+    } catch (e) {
+      toast(`Não foi possível ler ${file.name}.`, 'error');
+    }
+  }
+  if (!added.length) return;
+  const scope = input.dataset.photoInput;
+  if (scope === 'detail') {
+    const t = txById(input.dataset.tx);
+    t.photos.push(...added);
+    added.forEach(p => t.edits.push({ at: nowIso(), userId: currentUser().id, field: 'Foto adicionada', from: '', to: p.name }));
+    persist();
+    openDetail(t.id);
+  } else {
+    photoDrafts[scope].push(...added);
+    renderPhotoDraft(scope);
+  }
+}
+const photoAddTile = (scope, label, txId = '') =>
+  `<label class="photo-add">${icon('camera')}${label}<input type="file" accept="image/*" multiple data-photo-input="${scope}" data-tx="${txId}"></label>`;
+function thumbHtml(photo, removeAttrs) {
+  return `<figure class="thumb">
+    <button type="button" class="thumb-img" data-action="view-photo" data-photo-id="${photo.id}" aria-label="Ver foto ${esc(photo.name)}"><img src="${photo.dataUrl}" alt=""></button>
+    <figcaption>${esc(photo.name)}</figcaption>
+    ${removeAttrs ? `<button type="button" class="btn-icon remove-photo" ${removeAttrs} aria-label="Remover foto ${esc(photo.name)}">${icon('x')}</button>` : ''}
+  </figure>`;
+}
+function photoPickerHtml(scope, hint) {
+  return `<div class="field">
+    <span class="field-label" id="fotos-${scope}">Fotos <span class="optional">(opcional)</span></span>
+    <div class="photos" role="group" aria-labelledby="fotos-${scope}" data-photos="${scope}">${photoAddTile(scope, 'Tirar ou anexar foto')}</div>
+    <span class="hint">${hint}</span>
+  </div>`;
+}
+function renderPhotoDraft(scope) {
+  $(`[data-photos="${scope}"]`).innerHTML =
+    photoDrafts[scope].map(p => thumbHtml(p, `data-action="remove-draft-photo" data-scope="${scope}" data-id="${p.id}"`)).join('') +
+    photoAddTile(scope, 'Tirar ou anexar foto');
+}
+function findPhoto(id) {
+  return [...photoDrafts.entrada, ...photoDrafts.saida, ...state.transactions.flatMap(t => t.photos)].find(p => p.id === id);
+}
+function openPhoto(id) {
+  const photo = findPhoto(id);
+  if (!photo) return;
+  const dialog = $('#dlg-photo');
+  dialog.innerHTML = `<div class="dlg-head"><div><h2>${esc(photo.name)}</h2><p>Adicionada em ${fmtDateTime(photo.addedAt)}</p></div>${closeButton()}</div>
+    <div class="dlg-body"><img src="${photo.dataUrl}" alt="Foto ${esc(photo.name)}"></div>`;
+  dialog.showModal();
+}
+
+function downloadCsv(filename, rows) {
+  const csv = rows.map(row => row.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(';')).join('\r\n');
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  toast(`Arquivo ${filename} gerado.`);
+}
+
+function expiryBadge(ym, short = false) {
+  const days = daysToExpiry(ym);
+  if (days < 0) return `<span class="badge badge-danger">${icon('expired')}VENCIDO</span>`;
+  if (days > EXPIRING_DAYS) return '';
+  const text = days === 0 ? 'vence hoje' : short ? `${days} ${days === 1 ? 'dia' : 'dias'}` : `vence em ${days} ${days === 1 ? 'dia' : 'dias'}`;
+  return `<span class="badge badge-warn">${icon('alert')}${text}</span>`;
+}
+function expiryText(ym) {
+  const days = daysToExpiry(ym);
+  if (days < 0) return 'Vencido';
+  return days <= EXPIRING_DAYS ? `Vence em ${days} dias` : 'Dentro da validade';
+}
+const rowClass = ym => ({ expired: 'is-expired', expiring: 'is-expiring', ok: '' }[expiryStatus(ym)]);
+function maskExpiry(input) {
+  const digits = input.value.replace(/\D/g, '').slice(0, 6);
+  input.value = digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
+}
+
+// =====================================================================
+// Routing
+// =====================================================================
+const app = $('#app');
+let currentScreen = 'login';
+const renderers = {
+  login: renderLogin, estoque: renderEstoque, entrada: renderEntrada, saida: renderSaida,
+  historico: renderHistorico, medicamentos: renderMedicamentos, usuarios: renderUsuarios,
+};
+function navigate(screen) {
+  if (location.hash === '#' + screen) route();
+  else location.hash = screen;
+}
+function route() {
+  const user = currentUser();
+  let screen = location.hash.slice(1) || 'estoque';
+  if (!renderers[screen]) screen = 'estoque';
+  if (!user) screen = 'login';
+  else if (screen === 'login') screen = 'estoque';
+  else if (user.role !== 'admin' && ADMIN_SCREENS.includes(screen)) screen = 'estoque';
+  if (location.hash.slice(1) !== screen) history.replaceState(null, '', '#' + screen);
+  currentScreen = screen;
+  app.dataset.role = user?.role || '';
+  app.classList.toggle('is-login', screen === 'login');
+  $('#user-name').textContent = user?.name || '';
+  $$('.screen').forEach(s => { s.hidden = s.id !== 'screen-' + screen; });
+  $$('.tabs a[data-screen]').forEach(a => {
+    if (a.dataset.screen === screen) a.setAttribute('aria-current', 'page');
+    else a.removeAttribute('aria-current');
+  });
+  closeMenus();
+  renderCurrent();
+  app.scrollTop = 0;
+  window.scrollTo(0, 0);
+}
+function renderCurrent() {
+  renderers[currentScreen]();
+}
+
+// =====================================================================
+// Login
+// =====================================================================
+const loginAttempts = new Map();
+function renderLogin() {
+  $('#screen-login').innerHTML = `
+    <div class="login-wrap">
+      <form class="card card-pad login-card" data-form="login" novalidate>
+        <div class="brand-block">
+          <span class="brand-mark">UNILAB</span>
+          <h1>SAF</h1>
+          <p class="hint">Serviço de Apoio à Farmácia</p>
+        </div>
+        <div class="stack-lg">
+          ${field('Usuário', '<input name="login" autocomplete="username" autocapitalize="none" spellcheck="false" required>')}
+          <div class="field">
+            <label class="field-label" for="login-senha">Senha</label>
+            <div class="pw">
+              <input id="login-senha" name="password" type="password" autocomplete="current-password" required>
+              <button type="button" class="btn-icon" data-action="toggle-password" data-target="login-senha" aria-label="Mostrar senha" aria-pressed="false">${icon('eye')}</button>
+            </div>
+          </div>
+          <p class="field-error" id="login-erro" role="alert" hidden></p>
+          <button class="btn btn-primary btn-block" type="submit">Entrar</button>
+          <p class="hint center">Esqueceu a senha? Fale com o administrador.</p>
+        </div>
+      </form>
+    </div>`;
+  $('#screen-login [name=login]').focus();
+}
+function submitLogin(form) {
+  const login = normalize(form.login.value);
+  const error = $('#login-erro');
+  const showError = message => { error.innerHTML = icon('alert') + esc(message); error.hidden = false; };
+  const attempt = loginAttempts.get(login) || { count: 0, until: 0 };
+  if (attempt.until > Date.now()) return showError('Muitas tentativas. Aguarde 15 minutos e tente de novo.');
+  const user = state.users.find(u => u.login === login && u.active && u.password === form.password.value);
+  if (!user) {
+    attempt.count += 1;
+    if (attempt.count >= 5) attempt.until = Date.now() + 15 * 60 * 1000;
+    loginAttempts.set(login, attempt);
+    form.password.value = '';
+    form.password.focus();
+    return showError(attempt.until > Date.now() ? 'Muitas tentativas. Aguarde 15 minutos e tente de novo.' : 'Usuário ou senha incorretos.');
+  }
+  loginAttempts.delete(login);
+  user.lastLogin = nowIso();
+  persist();
+  localStorage.setItem(SESSION_KEY, user.id);
+  navigate('estoque');
+}
+
+// =====================================================================
+// Estoque
+// =====================================================================
+const ui = {
+  estoque: { q: '', filter: 'all', expanded: new Set() },
+  hist: null,
+  meds: { q: '', archived: false },
+};
+const defaultHistFilters = () => ({ from: isoDate(shiftDays(-30)), to: today(), type: 'all', med: '', lot: '', recipient: '', page: 1 });
+ui.hist = defaultHistFilters();
+
+function renderEstoque() {
+  const el = $('#screen-estoque');
+  if (!el.dataset.built) {
+    el.innerHTML = `
+      <div class="page-head">
+        <div><h1>Estoque</h1><p id="estoque-resumo"></p></div>
+        <div class="actions">
+          <button type="button" class="btn" data-action="estoque-csv">${icon('download')}Exportar CSV</button>
+          <a class="btn admin-only" href="#entrada">${icon('in')}Nova entrada</a>
+          <a class="btn btn-primary admin-only" href="#saida">${icon('out')}Nova saída</a>
+        </div>
+      </div>
+      <form class="card filters" role="search" data-form="noop">
+        ${field('Buscar', '<input type="search" placeholder="Medicamento, lote ou fabricante" data-input="estoque-q">')}
+        <fieldset>
+          <legend>Validade</legend>
+          <div class="segmented">
+            <label><input type="radio" name="validade" value="all" checked data-input="estoque-filter"><span>Todos</span></label>
+            <label><input type="radio" name="validade" value="expiring" data-input="estoque-filter"><span>Vencendo <span class="count" id="count-expiring"></span></span></label>
+            <label><input type="radio" name="validade" value="expired" data-input="estoque-filter"><span>Vencidos <span class="count" id="count-expired"></span></span></label>
+          </div>
+        </fieldset>
+      </form>
+      <div class="list-toolbar"><button type="button" class="btn btn-ghost" data-action="estoque-toggle-all">Expandir todos</button></div>
+      <div id="estoque-lista"></div>`;
+    el.dataset.built = '1';
+  }
+  refreshEstoqueList();
+}
+function stockGroups() {
+  const stock = stockByBatch();
+  const q = normalize(ui.estoque.q);
+  const counts = { expiring: 0, expired: 0, batches: 0 };
+  const groups = [];
+  for (const medicine of activeMedicines()) {
+    const batches = state.batches
+      .filter(b => b.medicineId === medicine.id && (stock.get(b.id) || 0) > 0)
+      .map(b => ({ ...b, qty: stock.get(b.id), status: expiryStatus(b.expiry) }))
+      .sort((a, b) => a.expiry.localeCompare(b.expiry));
+    for (const b of batches) {
+      counts.batches += 1;
+      if (b.status !== 'ok') counts[b.status] += 1;
+    }
+    const medicineMatches = !q || normalize(medicineLabel(medicine)).includes(q);
+    let shown = batches.filter(b => medicineMatches || normalize(b.lot).includes(q) || normalize(b.manufacturer).includes(q));
+    if (ui.estoque.filter !== 'all') shown = shown.filter(b => b.status === ui.estoque.filter);
+    const visible = ui.estoque.filter === 'all' ? medicineMatches || shown.length > 0 : shown.length > 0;
+    if (!visible) continue;
+    const expired = batches.filter(b => b.status === 'expired');
+    groups.push({
+      medicine, batches: shown,
+      total: batches.reduce((sum, b) => sum + b.qty, 0),
+      expiredUnits: expired.reduce((sum, b) => sum + b.qty, 0),
+      expiredBatches: expired.length,
+      expiringBatches: batches.filter(b => b.status === 'expiring').length,
+      batchCount: batches.length,
+    });
+  }
+  return { groups, counts };
+}
+function refreshEstoqueList() {
+  const { groups, counts } = stockGroups();
+  $('#count-expiring').textContent = counts.expiring;
+  $('#count-expired').textContent = counts.expired;
+  $('#estoque-resumo').textContent = `${activeMedicines().length} medicamentos · ${counts.batches} lotes · hoje, ${fmtDate(today())}`;
+  $('#estoque-lista').innerHTML = groups.length
+    ? groups.map(stockGroupHtml).join('')
+    : `<div class="card empty">${icon('search')}<p>Nenhum medicamento encontrado.</p></div>`;
+  paintStockToggleAll();
+}
+function stockGroupHtml(group) {
+  const m = group.medicine;
+  const admin = isAdmin();
+  const name = `<span><span class="med-name">${esc(m.ingredient)}</span> <span class="med-meta">${esc(m.strength)} · ${esc(m.dosageForm.toLocaleLowerCase('pt-BR'))}</span></span>`;
+  if (group.total === 0) {
+    return `<div class="card med"><div class="med-head">
+      <span class="med-title"><span class="chev-space" aria-hidden="true"></span>${name}</span>
+      <span class="badge badge-neutral">${icon('box')}Sem estoque</span>
+    </div></div>`;
+  }
+  const flags = [
+    group.expiredBatches && `<span class="badge badge-danger">${icon('expired')}${group.expiredBatches} ${group.expiredBatches > 1 ? 'lotes vencidos' : 'lote vencido'}</span>`,
+    group.expiringBatches && `<span class="badge badge-warn">${icon('alert')}${group.expiringBatches} ${group.expiringBatches > 1 ? 'lotes vencendo' : 'lote vencendo'}</span>`,
+  ].filter(Boolean).join('');
+  const rows = group.batches.map(b => `
+    <tr class="${rowClass(b.expiry)}">
+      <td data-label="Lote">${esc(b.lot)}</td>
+      <td data-label="Fabricante">${esc(b.manufacturer)}</td>
+      <td data-label="Validade" class="tnum">${fmtExpiry(b.expiry)}</td>
+      <td data-label="Quantidade" class="num">${b.qty}</td>
+      <td data-label="Situação">${expiryBadge(b.expiry)}</td>
+      ${admin ? `<td class="actions-cell"><button type="button" class="btn-icon" data-action="edit-batch" data-id="${b.id}" aria-label="Editar lote ${esc(b.lot)}">${icon('edit')}</button></td>` : ''}
+    </tr>`).join('');
+  // A search or a validity filter opens every matching group; otherwise the user's choice is kept.
+  const open = stockFiltering() || ui.estoque.expanded.has(m.id);
+  return `
+    <details class="card med" data-medicine="${m.id}" ${open ? 'open' : ''}>
+      <summary class="med-head" data-action="toggle-stock-group">
+        <span class="med-title"><svg class="icon chev" aria-hidden="true"><use href="#i-chevron"/></svg>${name}</span>
+        <span class="med-side">
+          ${flags}
+          <span class="med-count">${group.batchCount} ${group.batchCount > 1 ? 'lotes' : 'lote'}</span>
+          <span class="med-total">${qtyText(group.total, m.unit)}${group.expiredUnits ? `<small>${qtyText(group.expiredUnits, m.unit)} em ${group.expiredBatches > 1 ? 'lotes vencidos' : 'lote vencido'}, não dispensáveis</small>` : ''}</span>
+        </span>
+      </summary>
+      <table class="data stack stock-table">
+        <thead><tr><th>Lote</th><th>Fabricante</th><th>Validade</th><th class="num">Quantidade</th><th>Situação</th>${admin ? '<th><span class="sr-only">Ações</span></th>' : ''}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </details>`;
+}
+const stockFiltering = () => Boolean(normalize(ui.estoque.q)) || ui.estoque.filter !== 'all';
+function setStockGroupOpen(group, open) {
+  group.open = open;
+  if (stockFiltering()) return;
+  if (open) ui.estoque.expanded.add(group.dataset.medicine);
+  else ui.estoque.expanded.delete(group.dataset.medicine);
+}
+function paintStockToggleAll() {
+  const groups = $$('#estoque-lista details.med');
+  const button = $('[data-action="estoque-toggle-all"]');
+  button.hidden = !groups.length;
+  button.textContent = groups.length && groups.every(g => g.open) ? 'Recolher todos' : 'Expandir todos';
+}
+function exportStockCsv() {
+  const rows = [['Medicamento', 'Unidade', 'Lote', 'Fabricante', 'Validade', 'Quantidade', 'Situação']];
+  for (const g of stockGroups().groups) {
+    if (!g.batches.length) rows.push([medicineLabel(g.medicine), g.medicine.unit, '', '', '', 0, 'Sem estoque']);
+    for (const b of g.batches) rows.push([medicineLabel(g.medicine), g.medicine.unit, b.lot, b.manufacturer, fmtExpiry(b.expiry), b.qty, expiryText(b.expiry)]);
+  }
+  downloadCsv(`estoque-${today()}.csv`, rows);
+}
+
+function openEditBatch(id) {
+  const b = batchById(id);
+  openDialog(`
+    <form data-form="edit-batch" data-id="${b.id}" novalidate>
+      <div class="dlg-head"><div><h2>Editar lote</h2><p>${esc(medicineLabel(medicineById(b.medicineId)))}</p></div>${closeButton()}</div>
+      <div class="dlg-body">
+        <div class="form-grid">
+          ${field('Lote', `<input name="lot" value="${esc(b.lot)}" autocomplete="off">`)}
+          ${field('Fabricante', `<input name="manufacturer" list="dl-fabricantes" value="${esc(b.manufacturer)}" autocomplete="off">`)}
+          ${field('Validade', `<input name="expiry" inputmode="numeric" placeholder="MM/AAAA" maxlength="7" data-mask="expiry" value="${fmtExpiry(b.expiry)}" autocomplete="off">`)}
+        </div>
+        <p class="hint">Use para corrigir erros de digitação. O histórico guarda o valor antigo e o novo.</p>
+      </div>
+      <div class="dlg-foot"><span></span><div class="actions">
+        <button type="button" class="btn" data-action="close-dialog">Cancelar</button>
+        <button class="btn btn-primary" type="submit">${icon('check')}Salvar</button>
+      </div></div>
+    </form>`);
+}
+function saveBatchEdit(form) {
+  clearErrors(form);
+  const b = batchById(form.dataset.id);
+  const lot = form.lot.value.trim();
+  const manufacturer = form.manufacturer.value.trim();
+  const expiry = parseExpiry(form.expiry.value);
+  if (!lot) fieldError(form.lot, 'Informe o lote.');
+  if (!manufacturer) fieldError(form.manufacturer, 'Informe o fabricante.');
+  if (!expiry) fieldError(form.expiry, 'Use o formato MM/AAAA.');
+  if (lot && manufacturer) {
+    const clash = state.batches.find(x => x.id !== b.id && batchKey(x.medicineId, x.lot, x.manufacturer) === batchKey(b.medicineId, lot, manufacturer));
+    if (clash) fieldError(form.lot, `Já existe o lote ${clash.lot} (${clash.manufacturer}) deste medicamento.`);
+  }
+  if ($('[aria-invalid]', form)) return focusFirstInvalid(form);
+  const changes = [];
+  if (lot !== b.lot) changes.push({ field: 'Lote', from: b.lot, to: lot });
+  if (manufacturer !== b.manufacturer) changes.push({ field: 'Fabricante', from: b.manufacturer, to: manufacturer });
+  if (expiry !== b.expiry) changes.push({ field: 'Validade', from: fmtExpiry(b.expiry), to: fmtExpiry(expiry) });
+  closeDialog();
+  if (!changes.length) return;
+  Object.assign(b, { lot, manufacturer, expiry });
+  addAdjustment('batch', b.id, changes);
+  commit('Lote atualizado. A alteração ficou registrada no histórico.');
+}
+
+// =====================================================================
+// Entrada
+// =====================================================================
+function renderEntrada() {
+  const el = $('#screen-entrada');
+  if (el.dataset.built) return;
+  photoDrafts.entrada = [];
+  el.innerHTML = `
+    <div class="page-head"><div><h1>Nova entrada</h1><p>Uma entrada pode ter vários medicamentos.</p></div></div>
+    <form class="card" data-form="entrada" novalidate>
+      <div class="card-pad stack-lg">
+        <div class="form-grid">
+          ${field('Tipo de entrada', `<select name="type"><option value="">Selecione…</option>${ENTRY_TYPES.map(t => `<option>${t}</option>`).join('')}</select>`)}
+          ${field('Data', `<input type="date" name="date" value="${today()}" max="${today()}">`, 'Pode ser uma data passada. O histórico também mostra quando foi registrada.')}
+        </div>
+        <div role="group" aria-labelledby="entrada-linhas">
+          <div class="section-title"><h2 id="entrada-linhas">Medicamentos</h2></div>
+          <div class="lines-head" aria-hidden="true"><span>Medicamento</span><span>Lote</span><span>Fabricante</span><span>Validade</span><span>Quantidade</span><span></span></div>
+          <div id="entry-lines">${entryLineHtml()}</div>
+          <button type="button" class="btn btn-ghost" data-action="add-entry-line">${icon('plus')}Adicionar medicamento</button>
+        </div>
+        ${field('Observação <span class="optional">(obrigatória quando o tipo é Outros)</span>', '<textarea name="note" placeholder="Ex.: de onde veio, número da nota"></textarea>')}
+        ${photoPickerHtml('entrada', 'No celular dá para usar a câmera. As fotos são reduzidas antes de salvar.')}
+      </div>
+      <div class="form-foot">
+        <button type="button" class="btn" data-action="reset-entrada">Limpar</button>
+        <button class="btn btn-primary" type="submit">${icon('check')}Salvar entrada</button>
+      </div>
+    </form>`;
+  el.dataset.built = '1';
+}
+const entryLineHtml = () => `
+  <div class="line">
+    <label class="cell cell-med"><span class="cell-label">Medicamento</span><input name="med" list="dl-meds" autocomplete="off" placeholder="Digite para buscar" data-input="entry-med"></label>
+    <label class="cell"><span class="cell-label">Lote</span><input name="lot" autocomplete="off" autocapitalize="characters"></label>
+    <label class="cell"><span class="cell-label">Fabricante</span><input name="manufacturer" list="dl-fabricantes" autocomplete="off"></label>
+    <label class="cell"><span class="cell-label">Validade</span><input name="expiry" inputmode="numeric" placeholder="MM/AAAA" maxlength="7" data-mask="expiry" autocomplete="off"></label>
+    <label class="cell cell-qty"><span class="cell-label">Quantidade</span><span class="qty"><input name="qty" type="number" min="1" step="1" inputmode="numeric"><span class="unit">unidades</span></span></label>
+    <button type="button" class="btn-icon remove-line" data-action="remove-entry-line" aria-label="Remover este medicamento">${icon('x')}</button>
+  </div>`;
+function updateEntryUnit(line) {
+  const medicine = findActiveMedicine($('[name=med]', line).value);
+  $('.unit', line).textContent = medicine ? plural(medicine.unit, 2) : 'unidades';
+}
+function saveEntrada(form) {
+  clearErrors(form);
+  const type = form.type.value;
+  const date = form.date.value;
+  const note = form.note.value.trim();
+  if (!type) fieldError(form.type, 'Escolha o tipo de entrada.');
+  if (!date) fieldError(form.date, 'Informe a data.');
+  else if (date > today()) fieldError(form.date, 'A data não pode estar no futuro.');
+  if (type === 'Outros' && !note) fieldError(form.note, 'Descreva a entrada quando o tipo é Outros.');
+
+  const rows = $$('#entry-lines .line').filter(row => $$('input', row).some(i => i.value.trim()));
+  if (!rows.length) fieldError($('#entry-lines [name=med]'), 'Adicione pelo menos um medicamento.');
+  const parsed = [];
+  for (const row of rows) {
+    const input = name => $(`[name=${name}]`, row);
+    const medicine = findActiveMedicine(input('med').value);
+    const lot = input('lot').value.trim();
+    const manufacturer = input('manufacturer').value.trim();
+    const expiry = parseExpiry(input('expiry').value);
+    const qty = Number(input('qty').value);
+    const before = $$('[aria-invalid]', row).length;
+    if (!medicine) fieldError(input('med'), 'Escolha um medicamento da lista. Se não existir, cadastre em Medicamentos.');
+    if (!lot) fieldError(input('lot'), 'Informe o lote.');
+    if (!manufacturer) fieldError(input('manufacturer'), 'Informe o fabricante.');
+    if (!expiry) fieldError(input('expiry'), 'Validade no formato MM/AAAA.');
+    if (!Number.isInteger(qty) || qty < 1) fieldError(input('qty'), 'Quantidade: número inteiro maior que zero.');
+    if ($$('[aria-invalid]', row).length > before) continue;
+    const key = batchKey(medicine.id, lot, manufacturer);
+    const existing = state.batches.find(b => batchKey(b.medicineId, b.lot, b.manufacturer) === key);
+    const twin = parsed.find(p => p.key === key);
+    if (existing && existing.expiry !== expiry) {
+      fieldError(input('expiry'), `O lote ${existing.lot} (${existing.manufacturer}) já existe com validade ${fmtExpiry(existing.expiry)}. Corrija aqui ou edite o lote no Estoque.`);
+    } else if (twin && twin.expiry !== expiry) {
+      fieldError(input('expiry'), 'Este lote aparece em outra linha com outra validade.');
+    } else {
+      parsed.push({ key, medicine, lot, manufacturer, expiry, qty });
+    }
+  }
+  if ($('[aria-invalid]', form)) {
+    focusFirstInvalid(form);
+    return toast('Corrija os campos destacados.', 'error');
+  }
+
+  const lines = parsed.map(p => {
+    let batch = state.batches.find(b => batchKey(b.medicineId, b.lot, b.manufacturer) === p.key);
+    if (!batch) {
+      batch = { id: newId('b'), medicineId: p.medicine.id, lot: p.lot, manufacturer: p.manufacturer, expiry: p.expiry };
+      state.batches.push(batch);
+    }
+    return { batchId: batch.id, qty: p.qty };
+  });
+  const tx = { id: newId('t'), kind: 'in', type, date, createdAt: nowIso(), userId: currentUser().id, recipient: '', note, photos: photoDrafts.entrada, lines, edits: [] };
+  state.transactions.push(tx);
+  $('#screen-entrada').dataset.built = '';
+  commit();
+  toast(`Entrada registrada com ${lines.length} ${lines.length === 1 ? 'medicamento' : 'medicamentos'}.`, 'ok', { label: 'Ver no histórico', run: () => showInHistory(tx.id) });
+}
+
+// =====================================================================
+// Saída (FEFO)
+// =====================================================================
+function renderSaida() {
+  const el = $('#screen-saida');
+  if (!el.dataset.built) {
+    photoDrafts.saida = [];
+    el.innerHTML = `
+      <div class="page-head"><div><h1>Nova saída</h1><p>Os lotes vêm preenchidos pela menor validade. Ajuste se precisar.</p></div></div>
+      <form class="card" data-form="saida" novalidate>
+        <div class="card-pad stack-lg">
+          <div class="form-grid">
+            ${field('Tipo de saída', `<select name="type" data-input="exit-type"><option value="">Selecione…</option>${EXIT_TYPES.map(t => `<option>${t}</option>`).join('')}</select>`)}
+            ${field('Data', `<input type="date" name="date" value="${today()}" max="${today()}">`)}
+            <label class="field" id="field-recipient" hidden><span>Dispensado para <span class="optional">(opcional)</span></span>
+              <input name="recipient" autocomplete="off"><span class="hint">Só o nome. Sem CPF.</span></label>
+          </div>
+          <div role="group" aria-labelledby="saida-linhas">
+            <div class="section-title"><h2 id="saida-linhas">Medicamentos</h2></div>
+            <div id="exit-lines">${exitLineHtml()}</div>
+            <button type="button" class="btn btn-ghost" data-action="add-exit-line" style="margin-top:12px">${icon('plus')}Adicionar medicamento</button>
+          </div>
+          ${field('Observação <span class="optional">(opcional)</span>', '<textarea name="note" placeholder="Ex.: receita, setor, motivo da perda"></textarea>')}
+          ${photoPickerHtml('saida', 'A foto da receita substitui a segunda via para medicamentos isentos de prescrição.')}
+        </div>
+        <div class="form-foot">
+          <button type="button" class="btn" data-action="reset-saida">Limpar</button>
+          <button class="btn btn-primary" type="submit">${icon('check')}Salvar saída</button>
+        </div>
+      </form>`;
+    el.dataset.built = '1';
+  }
+  $$('#exit-lines .exit-line').forEach(renderFefo);
+}
+const exitLineHtml = () => `
+  <div class="exit-line">
+    <div class="exit-line-head">
+      ${field('Medicamento', '<input name="med" list="dl-meds" autocomplete="off" placeholder="Digite para buscar" data-input="exit-med">').replace('class="field"', 'class="field grow"')}
+      ${field('Quantidade', '<span class="qty"><input name="qty" class="req" type="number" min="1" step="1" inputmode="numeric" data-input="exit-qty"><span class="unit">unidades</span></span>')}
+      <button type="button" class="btn-icon" data-action="remove-exit-line" aria-label="Remover este medicamento">${icon('x')}</button>
+    </div>
+    <div class="fefo"></div>
+  </div>`;
+const exitType = () => $('#screen-saida [name=type]')?.value || '';
+function renderFefo(line) {
+  const host = $('.fefo', line);
+  const medicine = findActiveMedicine($('[name=med]', line).value);
+  line.dataset.medicineId = medicine?.id || '';
+  $('.unit', line).textContent = medicine ? plural(medicine.unit, 2) : 'unidades';
+  if (!medicine) { host.innerHTML = ''; return; }
+  const discard = exitType() === DISCARD;
+  const stock = stockByBatch();
+  const batches = state.batches
+    .filter(b => b.medicineId === medicine.id && (stock.get(b.id) || 0) > 0)
+    .sort((a, b) => a.expiry.localeCompare(b.expiry));
+  if (!batches.length) {
+    host.innerHTML = `<p class="fefo-empty">${icon('box')}Sem estoque deste medicamento.</p>`;
+    return;
+  }
+  host.innerHTML = `
+    <p class="hint fefo-hint">Preenchido pela menor validade (FEFO). Mude as quantidades se o lote em mãos for outro.</p>
+    <table class="data stack">
+      <thead><tr><th>Lote</th><th>Fabricante</th><th>Validade</th><th class="num">Em estoque</th><th class="num">Retirar</th></tr></thead>
+      <tbody>${batches.map(b => {
+        const qty = stock.get(b.id);
+        const blocked = expiryStatus(b.expiry) === 'expired' && !discard;
+        return `<tr class="${rowClass(b.expiry)}" data-batch="${b.id}" data-stock="${qty}">
+          <td data-label="Lote">${esc(b.lot)}</td>
+          <td data-label="Fabricante">${esc(b.manufacturer)}</td>
+          <td data-label="Validade"><span><span class="tnum">${fmtExpiry(b.expiry)}</span> ${expiryBadge(b.expiry, true)}</span></td>
+          <td data-label="Em estoque" class="num">${qty}</td>
+          <td data-label="Retirar" class="num"><span class="take-wrap">
+            <input class="take" type="number" min="0" max="${qty}" step="1" inputmode="numeric" value="0" ${blocked ? 'disabled' : ''} aria-label="Retirar do lote ${esc(b.lot)}" data-input="exit-take">
+            ${blocked ? '<span class="hint">Só sai por Vencimento/Descarte</span>' : ''}
+          </span></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>
+    <p class="sum" role="status" aria-live="polite"></p>`;
+  prefillFefo(line);
+}
+function prefillFefo(line) {
+  let left = Number($('.req', line).value) || 0;
+  $$('tbody tr', line).forEach(tr => {
+    const input = $('.take', tr);
+    const take = input.disabled ? 0 : Math.min(left, Number(tr.dataset.stock));
+    input.value = take;
+    left -= take;
+  });
+  updateFefoSum(line);
+}
+function updateFefoSum(line) {
+  const sum = $('.sum', line);
+  if (!sum) return;
+  const unit = medicineById(line.dataset.medicineId).unit;
+  const wanted = Number($('.req', line).value) || 0;
+  const rows = $$('tbody tr', line);
+  const taken = rows.reduce((total, tr) => total + (Number($('.take', tr).value) || 0), 0);
+  const usable = rows.filter(tr => !$('.take', tr).disabled).reduce((total, tr) => total + Number(tr.dataset.stock), 0);
+  const ok = wanted > 0 && taken === wanted;
+  let text;
+  if (!wanted) text = 'Informe a quantidade.';
+  else if (wanted > usable) text = `Disponível: ${qtyText(usable, unit)}. Faltam ${wanted - usable}.`;
+  else if (ok) text = `${taken} de ${qtyText(wanted, unit)}`;
+  else if (taken < wanted) text = `${taken} de ${qtyText(wanted, unit)}. Faltam ${wanted - taken}.`;
+  else text = `${taken} de ${qtyText(wanted, unit)}. ${taken - wanted} a mais.`;
+  sum.className = 'sum ' + (ok ? 'sum-ok' : wanted ? 'sum-warn' : 'sum-neutral');
+  sum.innerHTML = icon(ok ? 'check' : 'alert') + esc(text);
+}
+function saveSaida(form) {
+  clearErrors(form);
+  const type = form.type.value;
+  const date = form.date.value;
+  const note = form.note.value.trim();
+  if (!type) fieldError(form.type, 'Escolha o tipo de saída.');
+  if (!date) fieldError(form.date, 'Informe a data.');
+  else if (date > today()) fieldError(form.date, 'A data não pode estar no futuro.');
+
+  const exitLines = $$('#exit-lines .exit-line').filter(line => $('[name=med]', line).value.trim() || $('.req', line).value);
+  if (!exitLines.length) fieldError($('#exit-lines [name=med]'), 'Adicione pelo menos um medicamento.');
+  const stock = stockByBatch();
+  const seen = new Set();
+  const lines = [];
+  for (const line of exitLines) {
+    const medInput = $('[name=med]', line);
+    const qtyInput = $('.req', line);
+    const medicine = findActiveMedicine(medInput.value);
+    const wanted = Number(qtyInput.value);
+    if (!medicine) { fieldError(medInput, 'Escolha um medicamento da lista.'); continue; }
+    if (seen.has(medicine.id)) { fieldError(medInput, 'Este medicamento já está em outra linha.'); continue; }
+    seen.add(medicine.id);
+    if (!Number.isInteger(wanted) || wanted < 1) { fieldError(qtyInput, 'Número inteiro maior que zero.'); continue; }
+    const rows = $$('tbody tr', line);
+    if (!rows.length) { fieldError(qtyInput, 'Sem estoque deste medicamento.'); continue; }
+    const before = $$('[aria-invalid]', line).length;
+    let taken = 0;
+    const picked = [];
+    for (const tr of rows) {
+      const input = $('.take', tr);
+      const take = Number(input.value) || 0;
+      const batch = batchById(tr.dataset.batch);
+      const available = stock.get(batch.id) || 0;
+      if (!Number.isInteger(take) || take < 0) fieldError(input, 'Número inteiro.');
+      else if (take > available) fieldError(input, `Máximo ${available}.`);
+      else if (take > 0 && expiryStatus(batch.expiry) === 'expired' && type !== DISCARD) fieldError(input, 'Lote vencido só sai por Vencimento/Descarte.');
+      else if (take > 0) { taken += take; picked.push({ batchId: batch.id, qty: -take }); }
+    }
+    if ($$('[aria-invalid]', line).length > before) continue;
+    if (taken !== wanted) { fieldError(qtyInput, `Os lotes somam ${taken}, mas a quantidade é ${wanted}.`); continue; }
+    lines.push(...picked);
+  }
+  if ($('[aria-invalid]', form)) {
+    focusFirstInvalid(form);
+    return toast('Corrija os campos destacados.', 'error');
+  }
+
+  const recipient = type === DISPENSE ? form.recipient.value.trim() : '';
+  const tx = { id: newId('t'), kind: 'out', type, date, createdAt: nowIso(), userId: currentUser().id, recipient, note, photos: photoDrafts.saida, lines, edits: [] };
+  state.transactions.push(tx);
+  $('#screen-saida').dataset.built = '';
+  commit();
+  toast(`Saída registrada: ${type.toLowerCase()}.`, 'ok', { label: 'Ver no histórico', run: () => showInHistory(tx.id) });
+}
+
+// =====================================================================
+// Histórico
+// =====================================================================
+const KIND = {
+  in: { icon: 'in', label: 'Entrada' },
+  out: { icon: 'out', label: 'Saída' },
+  reversal: { icon: 'undo', label: 'Estorno' },
+  adjust: { icon: 'edit', label: 'Ajuste' },
+};
+function renderHistorico() {
+  const el = $('#screen-historico');
+  const f = ui.hist;
+  const option = (value, label) => `<option value="${value}" ${f.type === value ? 'selected' : ''}>${label}</option>`;
+  el.innerHTML = `
+    <div class="page-head">
+      <div><h1>Histórico</h1><p id="hist-resumo"></p></div>
+      <div class="actions"><button type="button" class="btn" data-action="hist-csv">${icon('download')}Exportar CSV</button></div>
+    </div>
+    <form class="card filters" data-form="hist-filters" novalidate>
+      <label class="field" style="flex:1 1 150px"><span>De</span><input type="date" name="from" value="${f.from}"></label>
+      <label class="field" style="flex:1 1 150px"><span>Até</span><input type="date" name="to" value="${f.to}"></label>
+      <label class="field" style="flex:1 1 200px"><span>Tipo</span><select name="type">
+        ${option('all', 'Todos')}
+        <optgroup label="Entradas">${option('in', 'Todas as entradas')}${ENTRY_TYPES.map(t => option('in:' + t, t)).join('')}</optgroup>
+        <optgroup label="Saídas">${option('out', 'Todas as saídas')}${EXIT_TYPES.map(t => option('out:' + t, t)).join('')}</optgroup>
+        <optgroup label="Correções">${option('reversal', 'Estornos')}${option('adjust', 'Ajustes')}</optgroup>
+      </select></label>
+      <label class="field"><span>Medicamento</span><input name="med" list="dl-meds" value="${esc(f.med)}" autocomplete="off"></label>
+      <label class="field" style="flex:1 1 120px"><span>Lote</span><input name="lot" value="${esc(f.lot)}" autocomplete="off"></label>
+      <label class="field"><span>Dispensado para</span><input name="recipient" value="${esc(f.recipient)}" autocomplete="off"></label>
+      <div class="actions"><button class="btn btn-primary" type="submit">Filtrar</button><button type="button" class="btn" data-action="hist-clear">Limpar</button></div>
+    </form>
+    <div class="card clip" id="hist-list"></div>
+    <nav class="pager" id="hist-pager" aria-label="Paginação"></nav>`;
+  refreshHistList();
+}
+function txBatches(t) {
+  if (t.kind === 'adjust') return t.target === 'batch' ? [batchById(t.refId)] : [];
+  return t.lines.map(l => batchById(l.batchId));
+}
+function txMedicines(t) {
+  if (t.kind === 'adjust' && t.target === 'medicine') return [medicineById(t.refId)].filter(Boolean);
+  return txBatches(t).map(b => medicineById(b.medicineId)).filter(Boolean);
+}
+function filteredTransactions() {
+  const f = ui.hist;
+  const med = normalize(f.med);
+  const lot = normalize(f.lot);
+  const recipient = normalize(f.recipient);
+  return state.transactions.filter(t => {
+    if (f.from && t.date < f.from) return false;
+    if (f.to && t.date > f.to) return false;
+    if (f.type !== 'all') {
+      const [kind, type] = f.type.split(':');
+      if (t.kind !== kind || (type && t.type !== type)) return false;
+    }
+    if (med && !txMedicines(t).some(m => normalize(medicineLabel(m)).includes(med))) return false;
+    if (lot && !txBatches(t).some(b => normalize(b.lot).includes(lot))) return false;
+    if (recipient && !normalize(t.recipient).includes(recipient)) return false;
+    return true;
+  }).sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
+}
+function txSubtitle(t) {
+  if (t.kind === 'reversal') {
+    const original = txById(t.reversesId);
+    return `da ${original.kind === 'in' ? 'entrada' : 'saída'} de ${fmtDate(original.date)}`;
+  }
+  if (t.kind === 'adjust') return t.target === 'batch' ? `Lote ${batchById(t.refId).lot}` : 'Medicamento';
+  return t.type;
+}
+function txWhen(t) {
+  const sameDay = isoDate(new Date(t.createdAt)) === t.date;
+  return sameDay ? `${fmtDate(t.date)} ${fmtTime(t.createdAt)}` : `${fmtDate(t.date)}<span class="cell-sub">registrado ${fmtDateTime(t.createdAt)}</span>`;
+}
+function lineSummary(t, line) {
+  const b = batchById(line.batchId);
+  const m = medicineById(b.medicineId);
+  const sign = t.kind === 'reversal' ? (line.qty > 0 ? '+' : '−') : '';
+  return `${medicineLabel(m)} · ${sign}${Math.abs(line.qty)}`;
+}
+function changesText(changes) {
+  return changes.map(c => `${c.field.toLowerCase()} ${c.from} → ${c.to}`).join('; ');
+}
+function adjustSubject(t) {
+  if (t.target === 'medicine') return medicineLabel(medicineById(t.refId));
+  const b = batchById(t.refId);
+  return `${medicineLabel(medicineById(b.medicineId))}, lote ${b.lot}`;
+}
+function histRowHtml(t) {
+  const kind = KIND[t.kind];
+  let items;
+  if (t.kind === 'adjust') {
+    items = `${esc(adjustSubject(t))}<span class="cell-sub">${esc(changesText(t.changes))}</span>`;
+  } else {
+    const [first, ...rest] = t.lines;
+    const more = rest.length === 1 ? esc(lineSummary(t, rest[0])) : rest.length ? `e mais ${rest.length} medicamentos` : '';
+    items = `${esc(lineSummary(t, first))}${more ? `<span class="cell-sub">${more}</span>` : ''}${t.note ? `<span class="cell-sub">${esc(truncate(t.note, 60))}</span>` : ''}`;
+  }
+  const reversed = t.reversedById ? ` <span class="badge badge-neutral">Estornada</span>` : '';
+  return `<tr class="${t.reversedById ? 'is-reversed' : ''}">
+    <td data-label="Data" class="tnum">${txWhen(t)}</td>
+    <td data-label="Movimento"><span class="mv">${icon(kind.icon)}${kind.label}</span><span class="cell-sub">${esc(txSubtitle(t))}${reversed}</span></td>
+    <td data-label="Itens">${items}</td>
+    <td data-label="Dispensado para">${esc(t.recipient) || '—'}</td>
+    <td data-label="Fotos" class="num">${t.photos.length}</td>
+    <td data-label="Usuário">${esc(userById(t.userId)?.name.split(' ')[0] || '—')}</td>
+    <td class="actions-cell"><button type="button" class="btn" data-action="open-detail" data-id="${t.id}">Detalhes</button></td>
+  </tr>`;
+}
+function refreshHistList() {
+  const all = filteredTransactions();
+  const pages = Math.max(1, Math.ceil(all.length / PAGE_SIZE));
+  ui.hist.page = Math.min(ui.hist.page, pages);
+  const pageItems = all.slice((ui.hist.page - 1) * PAGE_SIZE, ui.hist.page * PAGE_SIZE);
+  $('#hist-resumo').textContent = `Mais recentes primeiro · ${all.length} ${all.length === 1 ? 'movimentação' : 'movimentações'} no filtro`;
+  $('#hist-list').innerHTML = pageItems.length
+    ? `<table class="data stack">
+        <thead><tr><th>Data</th><th>Movimento</th><th>Itens</th><th>Dispensado para</th><th class="num">Fotos</th><th>Usuário</th><th><span class="sr-only">Ações</span></th></tr></thead>
+        <tbody>${pageItems.map(histRowHtml).join('')}</tbody>
+      </table>`
+    : `<div class="empty">${icon('search')}<p>Nenhuma movimentação com esses filtros.</p></div>`;
+  const page = ui.hist.page;
+  $('#hist-pager').innerHTML = pages > 1
+    ? `<button type="button" data-action="hist-page" data-page="${page - 1}" ${page === 1 ? 'disabled' : ''}>Anterior</button>` +
+      Array.from({ length: pages }, (_, i) => `<button type="button" data-action="hist-page" data-page="${i + 1}" ${i + 1 === page ? 'aria-current="page"' : ''}>${i + 1}</button>`).join('') +
+      `<button type="button" data-action="hist-page" data-page="${page + 1}" ${page === pages ? 'disabled' : ''}>Próxima</button>`
+    : '';
+}
+function applyHistFilters(form) {
+  ui.hist = { from: form.from.value, to: form.to.value, type: form.type.value, med: form.med.value, lot: form.lot.value, recipient: form.recipient.value, page: 1 };
+  refreshHistList();
+}
+function showInHistory(id) {
+  ui.hist = defaultHistFilters();
+  navigate('historico');
+  openDetail(id);
+}
+function exportHistCsv() {
+  const rows = [['Data do movimento', 'Registrado em', 'Movimento', 'Tipo', 'Medicamento', 'Lote', 'Fabricante', 'Validade', 'Quantidade', 'Unidade', 'Dispensado para', 'Observação', 'Usuário', 'Estornada']];
+  for (const t of filteredTransactions()) {
+    const base = [fmtDate(t.date), fmtDateTime(t.createdAt), KIND[t.kind].label, txSubtitle(t)];
+    const tail = [t.recipient, t.note, userById(t.userId)?.name || '', t.reversedById ? 'sim' : ''];
+    if (t.kind === 'adjust') {
+      rows.push([...base, adjustSubject(t), '', '', '', '', '', '', changesText(t.changes), userById(t.userId)?.name || '', '']);
+      continue;
+    }
+    for (const line of t.lines) {
+      const b = batchById(line.batchId);
+      const m = medicineById(b.medicineId);
+      rows.push([...base, medicineLabel(m), b.lot, b.manufacturer, fmtExpiry(b.expiry), Math.abs(line.qty), m.unit, ...tail]);
+    }
+  }
+  downloadCsv(`historico-${today()}.csv`, rows);
+}
+
+function openDetail(id) {
+  const t = txById(id);
+  if (t) openDialog(detailHtml(t), 'wide');
+}
+function detailHtml(t) {
+  const admin = isAdmin();
+  const kind = KIND[t.kind];
+  const original = t.reversesId && txById(t.reversesId);
+  const reversal = t.reversedById && txById(t.reversedById);
+  const meta = [
+    t.recipient && ['Dispensado para', esc(t.recipient)],
+    ['Data do movimento', fmtDate(t.date)],
+    ['Registrado em', `${fmtDateTime(t.createdAt)} por ${esc(userById(t.userId)?.name || '—')}`],
+    original && ['Estorno da', `<button type="button" class="link" data-action="open-detail" data-id="${original.id}">${original.kind === 'in' ? 'entrada' : 'saída'} de ${fmtDateTime(original.createdAt)}</button>`],
+    reversal && ['Estornada em', `<button type="button" class="link" data-action="open-detail" data-id="${reversal.id}">${fmtDateTime(reversal.createdAt)}</button>`],
+  ].filter(Boolean);
+  const head = `<div class="dlg-head"><div><h2><span class="mv">${icon(kind.icon)}${kind.label} · ${esc(txSubtitle(t))}</span></h2><p>${txWhen(t).replace('<span class="cell-sub">', ' · ').replace('</span>', '')}</p></div>${closeButton()}</div>`;
+  const metaHtml = `<dl class="meta">${meta.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>`;
+
+  if (t.kind === 'adjust') {
+    return `${head}<div class="dlg-body">${metaHtml}
+      <div><h3>${esc(adjustSubject(t))}</h3><ul class="log">${t.changes.map(c => `<li>${esc(c.field)}: ${esc(c.from)} → ${esc(c.to)}</li>`).join('')}</ul></div>
+    </div><div class="dlg-foot"><span></span><button type="button" class="btn" data-action="close-dialog">Fechar</button></div>`;
+  }
+
+  const items = t.lines.map(line => {
+    const b = batchById(line.batchId);
+    const m = medicineById(b.medicineId);
+    return `<tr><td data-label="Medicamento">${esc(medicineLabel(m))}</td><td data-label="Lote">${esc(b.lot)}</td><td data-label="Fabricante">${esc(b.manufacturer)}</td>
+      <td data-label="Validade" class="tnum">${fmtExpiry(b.expiry)}</td><td data-label="Quantidade" class="num">${qtyText(line.qty, m.unit)}</td></tr>`;
+  }).join('');
+  const photos = t.photos.map(p => thumbHtml(p, admin ? `data-action="remove-tx-photo" data-tx="${t.id}" data-id="${p.id}"` : '')).join('');
+  const log = t.edits.length
+    ? `<div><h3>Registro de alterações</h3><ul class="log">${t.edits.map(e => `<li><time>${fmtDateTime(e.at)}</time> · ${esc(userById(e.userId)?.name || '—')}: ${editText(e)}</li>`).join('')}</ul></div>`
+    : '';
+  const canReverse = admin && (t.kind === 'in' || t.kind === 'out') && !t.reversedById;
+  return `${head}
+    <div class="dlg-body">
+      ${metaHtml}
+      <div><h3>Itens</h3><div class="card clip" style="box-shadow:none"><table class="data stack">
+        <thead><tr><th>Medicamento</th><th>Lote</th><th>Fabricante</th><th>Validade</th><th class="num">Quantidade</th></tr></thead>
+        <tbody>${items}</tbody></table></div></div>
+      <div id="note-section">
+        <div class="inline-row"><h3>Observação</h3>${admin ? `<button type="button" class="btn btn-ghost" data-action="edit-note" data-id="${t.id}">${icon('edit')}Editar</button>` : ''}</div>
+        <p class="note-text">${t.note ? esc(t.note) : '<span class="hint">Sem observação.</span>'}</p>
+      </div>
+      <div>
+        <h3 id="dlg-fotos">Fotos</h3>
+        <div class="photos" role="group" aria-labelledby="dlg-fotos">${photos}${admin ? photoAddTile('detail', 'Adicionar foto', t.id) : ''}${!photos && !admin ? '<p class="hint">Sem fotos.</p>' : ''}</div>
+      </div>
+      ${log}
+    </div>
+    <div class="dlg-foot">
+      ${canReverse ? `<button type="button" class="btn btn-danger" data-action="reverse" data-id="${t.id}">${icon('undo')}Estornar ${t.kind === 'in' ? 'entrada' : 'saída'}</button>` : '<span></span>'}
+      <button type="button" class="btn" data-action="close-dialog">Fechar</button>
+    </div>`;
+}
+function editText(e) {
+  if (e.field.startsWith('Foto')) return `${esc(e.field.toLowerCase())} ${esc(e.to || e.from)}`;
+  return `${esc(e.field.toLowerCase())}: ${e.from ? `“${esc(e.from)}”` : '<em>(vazia)</em>'} → ${e.to ? `“${esc(e.to)}”` : '<em>(vazia)</em>'}`;
+}
+function showNoteEditor(id) {
+  const t = txById(id);
+  $('#note-section').innerHTML = `
+    <form data-form="edit-note" data-id="${t.id}" class="stack-lg">
+      ${field('Observação', `<textarea name="note" autofocus>${esc(t.note)}</textarea>`, 'O histórico guarda o texto antigo e o novo.')}
+      <div class="actions"><button class="btn btn-primary" type="submit">${icon('check')}Salvar observação</button><button type="button" class="btn" data-action="open-detail" data-id="${t.id}">Cancelar</button></div>
+    </form>`;
+  $('#note-section textarea').focus();
+}
+function saveNote(form) {
+  const t = txById(form.dataset.id);
+  const note = form.note.value.trim();
+  if (note !== t.note) {
+    t.edits.push({ at: nowIso(), userId: currentUser().id, field: 'Observação', from: t.note, to: note });
+    t.note = note;
+    persist();
+    renderCurrent();
+  }
+  openDetail(t.id);
+}
+function removeTxPhoto(txId, photoId) {
+  const t = txById(txId);
+  const photo = t.photos.find(p => p.id === photoId);
+  openConfirm({
+    title: 'Remover esta foto?', confirmLabel: 'Remover', danger: true,
+    body: `<p>A foto <strong>${esc(photo.name)}</strong> sai desta movimentação. O registro de alterações guarda que ela foi removida.</p>`,
+    onConfirm: () => {
+      t.photos = t.photos.filter(p => p.id !== photoId);
+      t.edits.push({ at: nowIso(), userId: currentUser().id, field: 'Foto removida', from: photo.name, to: '' });
+      persist();
+      renderCurrent();
+      openDetail(t.id);
+    },
+  });
+}
+function startReversal(id) {
+  const t = txById(id);
+  const stock = stockByBatch();
+  const effects = t.lines.map(line => {
+    const b = batchById(line.batchId);
+    return { b, m: medicineById(b.medicineId), delta: -line.qty, now: stock.get(b.id) || 0 };
+  });
+  const what = t.kind === 'in' ? 'entrada' : 'saída';
+  const short = effects.filter(e => e.now + e.delta < 0);
+  if (short.length) {
+    return openConfirm({
+      title: 'Não dá para estornar',
+      body: `<p>Parte desta entrada já saiu do estoque:</p>
+        <ul>${short.map(e => `<li>Lote ${esc(e.b.lot)} (${esc(medicineLabel(e.m))}): há ${qtyText(e.now, e.m.unit)}, o estorno retiraria ${-e.delta}.</li>`).join('')}</ul>
+        <p class="hint">Estorne antes as saídas que usaram esses lotes.</p>`,
+    });
+  }
+  openConfirm({
+    title: `Estornar esta ${what}?`, confirmLabel: 'Estornar', danger: true,
+    body: `<p>${t.kind === 'out' ? 'Devolve ao estoque' : 'Retira do estoque'}:</p>
+      <ul>${effects.map(e => `<li><strong>${qtyText(e.delta, e.m.unit)}</strong> do lote ${esc(e.b.lot)} · ${esc(medicineLabel(e.m))}</li>`).join('')}</ul>
+      <p class="hint">A ${what} original continua no histórico, marcada como estornada. Um estorno não pode ser desfeito: se precisar, registre uma nova ${what}.</p>`,
+    onConfirm: () => {
+      const reversal = {
+        id: newId('t'), kind: 'reversal', type: `Estorno de ${what}`, date: today(), createdAt: nowIso(), userId: currentUser().id,
+        recipient: '', note: '', photos: [], lines: t.lines.map(l => ({ batchId: l.batchId, qty: -l.qty })), reversesId: t.id, edits: [],
+      };
+      t.reversedById = reversal.id;
+      state.transactions.push(reversal);
+      closeDialog();
+      commit(`${what[0].toUpperCase() + what.slice(1)} estornada. O estoque foi atualizado.`);
+    },
+  });
+}
+
+// =====================================================================
+// Medicamentos
+// =====================================================================
+function renderMedicamentos() {
+  const el = $('#screen-medicamentos');
+  if (!el.dataset.built) {
+    el.innerHTML = `
+      <div class="page-head"><div><h1>Medicamentos</h1><p>Cada item é princípio ativo + concentração + forma farmacêutica.</p></div></div>
+      <form class="card" data-form="new-medicine" novalidate>
+        <div class="card-pad stack-lg">
+          <h2>Novo medicamento</h2>
+          <div class="form-grid">${medicineFields()}</div>
+        </div>
+        <div class="form-foot">
+          <button type="reset" class="btn">Limpar</button>
+          <button class="btn btn-primary" type="submit">${icon('plus')}Cadastrar</button>
+        </div>
+      </form>
+      <div class="card clip">
+        <div class="filters" style="margin:0">
+          ${field('Buscar', '<input type="search" placeholder="Princípio ativo" data-input="meds-q">')}
+          <label class="check"><input type="checkbox" data-input="meds-archived">Mostrar arquivados</label>
+        </div>
+        <div id="meds-table"></div>
+      </div>`;
+    el.dataset.built = '1';
+  }
+  refreshMedsTable();
+}
+const medicineFields = (m = {}) => `
+  ${field('Princípio ativo', `<input name="ingredient" list="dl-ativos" value="${esc(m.ingredient)}" autocomplete="off">`)}
+  ${field('Concentração', `<input name="strength" value="${esc(m.strength)}" autocomplete="off">`, 'Ex.: 500 mg, 50 mg/mL, 20 mg/g')}
+  ${field('Forma farmacêutica', `<input name="dosageForm" list="dl-formas" value="${esc(m.dosageForm)}" autocomplete="off">`)}
+  ${field('Unidade de contagem', `<input name="unit" list="dl-unidades" value="${esc(m.unit)}" autocomplete="off">`, 'Como o estoque é contado na entrada e na saída.')}`;
+function medicineValues(form) {
+  const clean = name => form[name].value.trim().replace(/\s+/g, ' ');
+  return { ingredient: clean('ingredient'), strength: clean('strength'), dosageForm: clean('dosageForm'), unit: clean('unit').toLocaleLowerCase('pt-BR') };
+}
+function validateMedicine(form, values, selfId) {
+  clearErrors(form);
+  if (!values.ingredient) fieldError(form.ingredient, 'Informe o princípio ativo.');
+  if (!values.strength) fieldError(form.strength, 'Informe a concentração.');
+  if (!values.dosageForm) fieldError(form.dosageForm, 'Informe a forma farmacêutica.');
+  if (!values.unit) fieldError(form.unit, 'Informe a unidade de contagem.');
+  if ($('[aria-invalid]', form)) return false;
+  const duplicate = state.medicines.find(m => m.id !== selfId && medicineKey(m) === medicineKey(values));
+  if (duplicate) {
+    fieldError(form.dosageForm, duplicate.archived
+      ? `Já existe, arquivado: ${medicineLabel(duplicate)}. Restaure em vez de cadastrar de novo.`
+      : `Já existe: ${medicineLabel(duplicate)}. Maiúsculas, acentos e espaços não contam.`);
+    return false;
+  }
+  return true;
+}
+function createMedicine(form) {
+  const values = medicineValues(form);
+  if (!validateMedicine(form, values)) return focusFirstInvalid(form);
+  state.medicines.push({ id: newId('m'), ...values, archived: false });
+  form.reset();
+  commit(`${medicineLabel(values)} cadastrado. Já aparece em Entrada.`);
+}
+function refreshMedsTable() {
+  const stock = stockByBatch();
+  const q = normalize(ui.meds.q);
+  const meds = state.medicines
+    .filter(m => (ui.meds.archived || !m.archived) && (!q || normalize(medicineLabel(m)).includes(q)))
+    .sort((a, b) => byText(medicineLabel(a), medicineLabel(b)));
+  const rows = meds.map(m => {
+    const qty = medicineStock(m.id, stock);
+    let actions;
+    if (m.archived) {
+      actions = `<button type="button" class="btn" data-action="restore-medicine" data-id="${m.id}">${icon('undo')}Restaurar</button>`;
+    } else {
+      const edit = `<button type="button" class="btn btn-ghost" data-action="edit-medicine" data-id="${m.id}">${icon('edit')}Editar</button>`;
+      if (!medicineHasMovements(m.id)) actions = `${edit}<button type="button" class="btn btn-danger" data-action="delete-medicine" data-id="${m.id}">${icon('trash')}Excluir</button>`;
+      else if (qty > 0) actions = `${edit}<button type="button" class="btn" aria-disabled="true" data-action="archive-blocked" aria-describedby="arch-${m.id}">${icon('archive')}Arquivar</button><span class="hint" id="arch-${m.id}" style="flex-basis:100%;text-align:right">Zere o estoque para arquivar</span>`;
+      else actions = `${edit}<button type="button" class="btn" data-action="archive-medicine" data-id="${m.id}">${icon('archive')}Arquivar</button>`;
+    }
+    return `<tr>
+      <td data-label="Medicamento"><strong>${esc(m.ingredient)}</strong> ${esc(m.strength)} · ${esc(m.dosageForm.toLocaleLowerCase('pt-BR'))}${m.archived ? ' <span class="badge badge-neutral">Arquivado</span>' : ''}${!medicineHasMovements(m.id) ? '<span class="cell-sub">Nunca movimentado</span>' : ''}</td>
+      <td data-label="Unidade">${esc(m.unit)}</td>
+      <td data-label="Em estoque" class="num">${qty}</td>
+      <td class="actions-cell"><div class="actions">${actions}</div></td>
+    </tr>`;
+  }).join('');
+  $('#meds-table').innerHTML = rows
+    ? `<table class="data stack"><thead><tr><th>Medicamento</th><th>Unidade</th><th class="num">Em estoque</th><th><span class="sr-only">Ações</span></th></tr></thead><tbody>${rows}</tbody></table>`
+    : `<div class="empty">${icon('search')}<p>Nenhum medicamento encontrado.</p></div>`;
+}
+function openEditMedicine(id) {
+  const m = medicineById(id);
+  openDialog(`
+    <form data-form="edit-medicine" data-id="${m.id}" novalidate>
+      <div class="dlg-head"><div><h2>Editar medicamento</h2><p>${esc(medicineLabel(m))}</p></div>${closeButton()}</div>
+      <div class="dlg-body">
+        <div class="form-grid">${medicineFields(m)}</div>
+        <p class="hint">Use para corrigir erros de digitação. A mudança aparece em todo o histórico deste medicamento e fica registrada.</p>
+      </div>
+      <div class="dlg-foot"><span></span><div class="actions">
+        <button type="button" class="btn" data-action="close-dialog">Cancelar</button>
+        <button class="btn btn-primary" type="submit">${icon('check')}Salvar</button>
+      </div></div>
+    </form>`);
+}
+function saveMedicineEdit(form) {
+  const m = medicineById(form.dataset.id);
+  const values = medicineValues(form);
+  if (!validateMedicine(form, values, m.id)) return focusFirstInvalid(form);
+  const labels = { ingredient: 'Princípio ativo', strength: 'Concentração', dosageForm: 'Forma farmacêutica', unit: 'Unidade' };
+  const changes = Object.keys(labels).filter(k => values[k] !== m[k]).map(k => ({ field: labels[k], from: m[k], to: values[k] }));
+  closeDialog();
+  if (!changes.length) return;
+  Object.assign(m, values);
+  addAdjustment('medicine', m.id, changes);
+  commit('Medicamento atualizado. A alteração ficou registrada no histórico.');
+}
+function setArchived(id, archived) {
+  const m = medicineById(id);
+  const apply = () => {
+    m.archived = archived;
+    addAdjustment('medicine', m.id, [{ field: 'Situação', from: archived ? 'Ativo' : 'Arquivado', to: archived ? 'Arquivado' : 'Ativo' }]);
+    commit(archived ? `${medicineLabel(m)} arquivado.` : `${medicineLabel(m)} restaurado.`);
+  };
+  if (!archived) return apply();
+  openConfirm({
+    title: `Arquivar ${medicineLabel(m)}?`, confirmLabel: 'Arquivar',
+    body: '<p>Ele some do Estoque e das telas de Entrada e Saída. O histórico continua mostrando as movimentações dele, e dá para restaurar depois.</p>',
+    onConfirm: apply,
+  });
+}
+function deleteMedicine(id) {
+  const m = medicineById(id);
+  openConfirm({
+    title: `Excluir ${medicineLabel(m)}?`, confirmLabel: 'Excluir', danger: true,
+    body: '<p>Ele nunca teve entrada nem saída, então sai do catálogo de vez.</p>',
+    onConfirm: () => {
+      state.medicines = state.medicines.filter(x => x.id !== id);
+      commit(`${medicineLabel(m)} excluído.`);
+    },
+  });
+}
+
+// =====================================================================
+// Usuários
+// =====================================================================
+const ROLE_LABEL = { admin: 'Administrador', viewer: 'Visualização' };
+function renderUsuarios() {
+  const el = $('#screen-usuarios');
+  if (!el.dataset.built) {
+    el.innerHTML = `
+      <div class="page-head"><div><h1>Usuários</h1><p>Cada pessoa tem o próprio login. O histórico registra quem fez cada movimento.</p></div></div>
+      <div class="card clip" id="users-table"></div>
+      <form class="card" data-form="new-user" novalidate>
+        <div class="card-pad stack-lg">
+          <h2>Novo usuário</h2>
+          <div class="form-grid">
+            ${field('Nome', '<input name="name" autocomplete="off">')}
+            ${field('Login', '<input name="login" autocomplete="off" autocapitalize="none" spellcheck="false">', 'Letras minúsculas, números e ponto. Ex.: joao.silva')}
+            ${field('Senha inicial', `<input name="password" type="password" autocomplete="new-password">`, `Mínimo ${MIN_PASSWORD} caracteres. Entregue pessoalmente.`)}
+            <fieldset><legend>Perfil</legend>
+              <label class="check"><input type="radio" name="role" value="viewer" checked>Visualização: vê estoque e histórico</label>
+              <label class="check"><input type="radio" name="role" value="admin">Administrador: faz tudo</label>
+            </fieldset>
+          </div>
+        </div>
+        <div class="form-foot"><button class="btn btn-primary" type="submit">${icon('plus')}Criar usuário</button></div>
+      </form>`;
+    el.dataset.built = '1';
+  }
+  const me = currentUser();
+  $('#users-table').innerHTML = `<table class="data stack">
+    <thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Situação</th><th>Último acesso</th><th><span class="sr-only">Ações</span></th></tr></thead>
+    <tbody>${state.users.map(u => `<tr>
+      <td data-label="Nome"><strong>${esc(u.name)}</strong>${u.id === me.id ? ' <span class="badge badge-neutral">você</span>' : ''}</td>
+      <td data-label="Login">${esc(u.login)}</td>
+      <td data-label="Perfil">${ROLE_LABEL[u.role]}</td>
+      <td data-label="Situação">${u.active ? `<span class="badge badge-ok">${icon('check')}Ativo</span>` : '<span class="badge badge-neutral">Desativado</span>'}</td>
+      <td data-label="Último acesso" class="tnum">${relativeDateTime(u.lastLogin)}</td>
+      <td class="actions-cell"><div class="actions">${u.id === me.id
+        ? `<button type="button" class="btn btn-ghost" data-action="change-own-password">${icon('key')}Alterar minha senha</button>`
+        : `<button type="button" class="btn btn-ghost" data-action="reset-password" data-id="${u.id}">${icon('key')}Redefinir senha</button>
+           <button type="button" class="btn ${u.active ? 'btn-danger' : ''}" data-action="toggle-user" data-id="${u.id}">${u.active ? 'Desativar' : 'Reativar'}</button>`}
+      </div></td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+function createUser(form) {
+  clearErrors(form);
+  const name = form.name.value.trim().replace(/\s+/g, ' ');
+  const login = form.login.value.trim().toLowerCase();
+  const password = form.password.value;
+  if (!name) fieldError(form.name, 'Informe o nome.');
+  if (!/^[a-z0-9._-]{3,}$/.test(login)) fieldError(form.login, 'Use pelo menos 3 caracteres: letras minúsculas, números, ponto, hífen.');
+  else if (state.users.some(u => u.login === login)) fieldError(form.login, 'Este login já existe.');
+  if (password.length < MIN_PASSWORD) fieldError(form.password, `A senha precisa de pelo menos ${MIN_PASSWORD} caracteres.`);
+  if ($('[aria-invalid]', form)) return focusFirstInvalid(form);
+  state.users.push({ id: newId('u'), name, login, password, role: form.role.value, active: true, lastLogin: null });
+  form.reset();
+  commit(`Usuário ${login} criado.`);
+}
+function openResetPassword(id) {
+  const u = userById(id);
+  openDialog(`
+    <form data-form="reset-password" data-id="${u.id}" novalidate>
+      <div class="dlg-head"><div><h2>Redefinir senha</h2><p>${esc(u.name)} · ${esc(u.login)}</p></div>${closeButton()}</div>
+      <div class="dlg-body">${field('Nova senha', '<input name="password" type="password" autocomplete="new-password">', `Mínimo ${MIN_PASSWORD} caracteres. Entregue pessoalmente.`)}</div>
+      <div class="dlg-foot"><span></span><div class="actions">
+        <button type="button" class="btn" data-action="close-dialog">Cancelar</button>
+        <button class="btn btn-primary" type="submit">${icon('check')}Salvar senha</button>
+      </div></div>
+    </form>`);
+}
+function saveResetPassword(form) {
+  clearErrors(form);
+  if (form.password.value.length < MIN_PASSWORD) return fieldError(form.password, `A senha precisa de pelo menos ${MIN_PASSWORD} caracteres.`);
+  const u = userById(form.dataset.id);
+  u.password = form.password.value;
+  closeDialog();
+  commit(`Senha de ${u.name} redefinida.`);
+}
+function openOwnPassword() {
+  closeMenus();
+  openDialog(`
+    <form data-form="own-password" novalidate>
+      <div class="dlg-head"><div><h2>Alterar minha senha</h2></div>${closeButton()}</div>
+      <div class="dlg-body">
+        ${field('Senha atual', '<input name="current" type="password" autocomplete="current-password">')}
+        ${field('Nova senha', '<input name="password" type="password" autocomplete="new-password">', `Mínimo ${MIN_PASSWORD} caracteres.`)}
+        ${field('Repita a nova senha', '<input name="confirm" type="password" autocomplete="new-password">')}
+      </div>
+      <div class="dlg-foot"><span></span><div class="actions">
+        <button type="button" class="btn" data-action="close-dialog">Cancelar</button>
+        <button class="btn btn-primary" type="submit">${icon('check')}Salvar senha</button>
+      </div></div>
+    </form>`);
+}
+function saveOwnPassword(form) {
+  clearErrors(form);
+  const me = currentUser();
+  if (form.current.value !== me.password) fieldError(form.current, 'Senha atual incorreta.');
+  if (form.password.value.length < MIN_PASSWORD) fieldError(form.password, `A senha precisa de pelo menos ${MIN_PASSWORD} caracteres.`);
+  else if (form.confirm.value !== form.password.value) fieldError(form.confirm, 'As senhas não são iguais.');
+  if ($('[aria-invalid]', form)) return focusFirstInvalid(form);
+  me.password = form.password.value;
+  closeDialog();
+  commit('Sua senha foi alterada.');
+}
+function toggleUser(id) {
+  const u = userById(id);
+  if (!u.active) {
+    u.active = true;
+    return commit(`${u.name} pode entrar de novo.`);
+  }
+  openConfirm({
+    title: `Desativar ${u.name}?`, confirmLabel: 'Desativar', danger: true,
+    body: '<p>A pessoa não consegue mais entrar. O histórico continua mostrando o nome dela nas movimentações.</p>',
+    onConfirm: () => { u.active = false; commit(`${u.name} desativado.`); },
+  });
+}
+
+// =====================================================================
+// Theme
+// =====================================================================
+const prefersDark = matchMedia('(prefers-color-scheme: dark)');
+const effectiveTheme = () => document.documentElement.dataset.theme || (prefersDark.matches ? 'dark' : 'light');
+function paintThemeToggle() {
+  const dark = effectiveTheme() === 'dark';
+  const button = $('#theme-toggle');
+  button.setAttribute('aria-label', dark ? 'Usar tema claro' : 'Usar tema escuro');
+  $('use', button).setAttribute('href', dark ? '#i-sun' : '#i-moon');
+}
+function toggleTheme() {
+  document.documentElement.dataset.theme = effectiveTheme() === 'dark' ? 'light' : 'dark';
+  localStorage.setItem(THEME_KEY, document.documentElement.dataset.theme);
+  paintThemeToggle();
+}
+prefersDark.addEventListener('change', paintThemeToggle);
+
+// =====================================================================
+// Events
+// =====================================================================
+function resetPrototype() {
+  openConfirm({
+    title: 'Restaurar dados de exemplo?', confirmLabel: 'Restaurar', danger: true,
+    body: '<p>Apaga tudo o que foi cadastrado neste navegador e volta aos dados de exemplo.</p>',
+    onConfirm: () => {
+      state = seedState();
+      persist();
+      $$('.screen').forEach(s => { s.dataset.built = ''; });
+      ui.estoque = { q: '', filter: 'all', expanded: new Set() };
+      ui.meds = { q: '', archived: false };
+      ui.hist = defaultHistFilters();
+      closeDialog();
+      refreshDatalists();
+      route();
+      toast('Dados de exemplo restaurados.');
+    },
+  });
+}
+
+// The prototype bar folds into one line so the client can see the app almost full screen.
+function setProtoCollapsed(collapsed) {
+  const toggle = $('[data-action="proto-collapse"]');
+  $('.proto-bar').classList.toggle('is-collapsed', collapsed);
+  toggle.setAttribute('aria-expanded', String(!collapsed));
+  toggle.setAttribute('aria-label', collapsed ? 'Mostrar barra do protótipo' : 'Ocultar barra do protótipo');
+  $('.proto-toggle-text', toggle).textContent = collapsed ? 'Mostrar' : 'Ocultar';
+  localStorage.setItem(PROTO_BAR_KEY, collapsed ? 'fechada' : 'aberta');
+}
+
+const actions = {
+  'toggle-menu': el => toggleMenu(el),
+  'toggle-theme': toggleTheme,
+  'logout': () => { localStorage.removeItem(SESSION_KEY); navigate('login'); },
+  'toggle-password': el => {
+    const input = document.getElementById(el.dataset.target);
+    const show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    el.setAttribute('aria-pressed', String(show));
+    el.setAttribute('aria-label', show ? 'Ocultar senha' : 'Mostrar senha');
+  },
+  'change-own-password': openOwnPassword,
+  'estoque-csv': exportStockCsv,
+  'toggle-stock-group': el => { const group = el.closest('details'); setStockGroupOpen(group, !group.open); paintStockToggleAll(); },
+  'estoque-toggle-all': () => {
+    const groups = $$('#estoque-lista details.med');
+    const open = groups.some(g => !g.open);
+    groups.forEach(g => setStockGroupOpen(g, open));
+    paintStockToggleAll();
+  },
+  'edit-batch': el => openEditBatch(el.dataset.id),
+  'add-entry-line': () => {
+    $('#entry-lines').insertAdjacentHTML('beforeend', entryLineHtml());
+    $('#entry-lines .line:last-child [name=med]').focus();
+  },
+  'remove-entry-line': el => {
+    if ($('#entry-lines').children.length > 1) el.closest('.line').remove();
+    else $$('input', el.closest('.line')).forEach(i => { i.value = ''; });
+  },
+  'reset-entrada': () => { $('#screen-entrada').dataset.built = ''; renderEntrada(); },
+  'add-exit-line': () => {
+    $('#exit-lines').insertAdjacentHTML('beforeend', exitLineHtml());
+    $('#exit-lines .exit-line:last-child [name=med]').focus();
+  },
+  'remove-exit-line': el => {
+    if ($('#exit-lines').children.length > 1) el.closest('.exit-line').remove();
+    else { const line = el.closest('.exit-line'); $$('input', line).forEach(i => { i.value = ''; }); renderFefo(line); }
+  },
+  'reset-saida': () => { $('#screen-saida').dataset.built = ''; renderSaida(); },
+  'remove-draft-photo': el => {
+    photoDrafts[el.dataset.scope] = photoDrafts[el.dataset.scope].filter(p => p.id !== el.dataset.id);
+    renderPhotoDraft(el.dataset.scope);
+  },
+  'view-photo': el => openPhoto(el.dataset.photoId),
+  'hist-csv': exportHistCsv,
+  'hist-clear': () => { ui.hist = defaultHistFilters(); renderHistorico(); },
+  'hist-page': el => { ui.hist.page = Number(el.dataset.page); refreshHistList(); },
+  'open-detail': el => openDetail(el.dataset.id),
+  'edit-note': el => showNoteEditor(el.dataset.id),
+  'remove-tx-photo': el => removeTxPhoto(el.dataset.tx, el.dataset.id),
+  'reverse': el => startReversal(el.dataset.id),
+  'close-dialog': el => el.closest('dialog').close(),
+  'confirm-ok': () => { const run = confirmAction; confirmAction = null; $('#dlg-confirm').close(); run?.(); },
+  'confirm-cancel': () => { confirmAction = null; $('#dlg-confirm').close(); },
+  'edit-medicine': el => openEditMedicine(el.dataset.id),
+  'archive-medicine': el => setArchived(el.dataset.id, true),
+  'archive-blocked': () => toast('Este medicamento ainda tem estoque. Registre a saída (por exemplo, Vencimento/Descarte) antes de arquivar.', 'error'),
+  'restore-medicine': el => setArchived(el.dataset.id, false),
+  'delete-medicine': el => deleteMedicine(el.dataset.id),
+  'reset-password': el => openResetPassword(el.dataset.id),
+  'toggle-user': el => toggleUser(el.dataset.id),
+  'proto-guide': el => {
+    const guide = $('#proto-guide');
+    guide.hidden = !guide.hidden;
+    el.setAttribute('aria-expanded', String(!guide.hidden));
+  },
+  'proto-phone': el => {
+    const phone = app.classList.toggle('phone');
+    el.setAttribute('aria-pressed', String(phone));
+  },
+  'proto-reset': resetPrototype,
+  'proto-collapse': () => setProtoCollapsed(!$('.proto-bar').classList.contains('is-collapsed')),
+};
+const forms = {
+  'login': submitLogin,
+  'entrada': saveEntrada,
+  'saida': saveSaida,
+  'hist-filters': applyHistFilters,
+  'edit-batch': saveBatchEdit,
+  'edit-note': saveNote,
+  'new-medicine': createMedicine,
+  'edit-medicine': saveMedicineEdit,
+  'new-user': createUser,
+  'reset-password': saveResetPassword,
+  'own-password': saveOwnPassword,
+  'noop': () => {},
+};
+const inputs = {
+  'estoque-q': el => { ui.estoque.q = el.value; refreshEstoqueList(); },
+  'estoque-filter': el => { ui.estoque.filter = el.value; refreshEstoqueList(); },
+  'entry-med': el => updateEntryUnit(el.closest('.line')),
+  'exit-type': el => {
+    $('#field-recipient').hidden = el.value !== DISPENSE;
+    $$('#exit-lines .exit-line').forEach(renderFefo);
+  },
+  'exit-med': el => renderFefo(el.closest('.exit-line')),
+  'exit-qty': el => prefillFefo(el.closest('.exit-line')),
+  'exit-take': el => updateFefoSum(el.closest('.exit-line')),
+  'meds-q': el => { ui.meds.q = el.value; refreshMedsTable(); },
+  'meds-archived': el => { ui.meds.archived = el.checked; refreshMedsTable(); },
+};
+
+document.addEventListener('click', event => {
+  if (!event.target.closest('.menu-wrap')) closeMenus();
+  if (event.target.closest('.menu a')) closeMenus();
+  const el = event.target.closest('[data-action]');
+  if (!el || !actions[el.dataset.action]) return;
+  event.preventDefault();
+  actions[el.dataset.action](el, event);
+});
+document.addEventListener('submit', event => {
+  const form = event.target.closest('form[data-form]');
+  if (!form) return;
+  event.preventDefault();
+  forms[form.dataset.form](form);
+});
+document.addEventListener('input', event => {
+  const el = event.target;
+  if (el.dataset.mask === 'expiry') maskExpiry(el);
+  inputs[el.dataset.input]?.(el, event);
+});
+document.addEventListener('change', event => {
+  if (event.target.matches('[data-photo-input]')) addPhotos(event.target);
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') closeMenus();
+});
+$('#dlg-photo').addEventListener('click', event => {
+  if (event.target === event.currentTarget) event.currentTarget.close();
+});
+window.addEventListener('hashchange', route);
+
+refreshDatalists();
+paintThemeToggle();
+if (localStorage.getItem(PROTO_BAR_KEY) === 'fechada') setProtoCollapsed(true);
+if (firstVisit) {
+  $('#proto-guide').hidden = false;
+  $('[data-action="proto-guide"]').setAttribute('aria-expanded', 'true');
+}
+route();
+</script>
+</body>
+</html>

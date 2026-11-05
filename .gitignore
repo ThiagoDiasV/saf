@@ -1,0 +1,12 @@
+# Local data: database, photos, backups. Never commit patient data.
+/data/
+*.db
+*.db-wal
+*.db-shm
+# The encryption key lives outside the repo; this catches accidents.
+*.key
+.trivy-image.tar
+.DS_Store
+/saf
+/dist/
+/.litestream-src/

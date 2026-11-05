@@ -1,0 +1,23 @@
+{{define "medicine-fields"}}
+<label class="field"><span>Princípio ativo</span>
+  <input name="ingredient" list="dl-ativos" value="{{.Page.Values.Ingredient}}" autocomplete="off"{{if .Errors.ingredient}} aria-invalid="true"{{end}}>
+  {{- with .Errors.ingredient}}<span class="field-error">{{icon "alert"}}{{.}}</span>{{end}}
+</label>
+<label class="field"><span>Concentração</span>
+  <input name="strength" value="{{.Page.Values.Strength}}" autocomplete="off"{{if .Errors.strength}} aria-invalid="true"{{end}}>
+  <span class="hint">Ex.: 500 mg, 50 mg/mL, 20 mg/g</span>
+  {{- with .Errors.strength}}<span class="field-error">{{icon "alert"}}{{.}}</span>{{end}}
+</label>
+<label class="field"><span>Forma farmacêutica</span>
+  <input name="dosage_form" list="dl-formas" value="{{.Page.Values.DosageForm}}" autocomplete="off"{{if .Errors.dosage_form}} aria-invalid="true"{{end}}>
+  {{- with .Errors.dosage_form}}<span class="field-error">{{icon "alert"}}{{.}}</span>{{end}}
+</label>
+<label class="field"><span>Unidade de contagem</span>
+  <input name="unit" list="dl-unidades" value="{{.Page.Values.Unit}}" autocomplete="off"{{if .Errors.unit}} aria-invalid="true"{{end}}>
+  <span class="hint">Como o estoque é contado na entrada e na saída.</span>
+  {{- with .Errors.unit}}<span class="field-error">{{icon "alert"}}{{.}}</span>{{end}}
+</label>
+<datalist id="dl-ativos">{{range .Page.Suggestions.Ingredients}}<option value="{{.}}">{{end}}</datalist>
+<datalist id="dl-formas">{{range .Page.Suggestions.DosageForms}}<option value="{{.}}">{{end}}</datalist>
+<datalist id="dl-unidades">{{range .Page.Suggestions.Units}}<option value="{{.}}">{{end}}</datalist>
+{{end}}

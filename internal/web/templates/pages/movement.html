@@ -1,0 +1,115 @@
+{{define "content"}}
+{{- $p := .Page}}
+<div class="page-head">
+  <div><h1><span class="mv">{{icon $p.Row.Icon}}{{$p.Row.Label}} · {{$p.Row.Subtitle}}</span></h1><p>{{$p.Row.When}}</p></div>
+  <div class="actions"><a class="btn" href="/historico">Voltar ao histórico</a></div>
+</div>
+
+<div class="card card-pad stack-lg">
+  <dl class="meta">
+    {{- with $p.PatientName}}<dt>Dispensado para</dt><dd>{{.}}</dd>{{end}}
+    <dt>Data do movimento</dt><dd>{{date $p.OccurredOn}}</dd>
+    <dt>Registrado em</dt><dd>{{$p.RecordedAt | localTime}} por {{$p.UserName}}</dd>
+    {{- if $p.ReversesID}}<dt>Estorno da</dt><dd><a href="/movimentos/{{$p.ReversesID}}">{{if eq $p.ReversesKind "in"}}entrada{{else}}saída{{end}} de {{date $p.ReversesOn}}</a></dd>{{end}}
+    {{- if $p.ReversedByID}}<dt>Estornada em</dt><dd><a href="/movimentos/{{$p.ReversedByID}}">ver o estorno</a></dd>{{end}}
+  </dl>
+
+  <div>
+    <h3 class="section-h">Itens</h3>
+    <div class="card clip flat">
+      <table class="data stack">
+        <thead><tr><th>Medicamento</th><th>Lote</th><th>Fabricante</th><th>Validade</th><th class="num">Quantidade</th></tr></thead>
+        <tbody>
+        {{- range $p.Lines}}
+          <tr>
+            <td data-label="Medicamento">{{.Medicine}}</td>
+            <td data-label="Lote">{{.Lot}}</td>
+            <td data-label="Fabricante">{{.Manufacturer}}</td>
+            <td data-label="Validade" class="tnum">{{.Expiry}}</td>
+            <td data-label="Quantidade" class="num">{{qty (abs .Quantity) .Unit}}</td>
+          </tr>
+        {{- end}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div>
+    {{- if $p.EditingNote}}
+    <form method="post" action="/movimentos/{{$p.MovementID}}/observacao" class="stack-lg" novalidate>
+      <label class="field"><span>Observação</span>
+        <textarea name="note" autofocus{{if .Errors.note}} aria-invalid="true"{{end}}>{{$p.NoteValue}}</textarea>
+        <span class="hint">O histórico guarda o texto antigo e o novo. Não escreva dados de pacientes aqui.</span>
+        {{- with .Errors.note}}<span class="field-error">{{icon "alert"}}{{.}}</span>{{end}}
+      </label>
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">{{icon "check"}}Salvar observação</button>
+        <a class="btn" href="/movimentos/{{$p.MovementID}}">Cancelar</a>
+      </div>
+    </form>
+    {{- else}}
+    <div class="inline-row"><h3>Observação</h3>
+      {{- if .User.IsAdmin}}<a class="btn btn-ghost" href="/movimentos/{{$p.MovementID}}?editar=observacao">{{icon "edit"}}Editar</a>{{end}}</div>
+    <p class="note-text">{{with $p.Note}}{{.}}{{else}}<span class="hint">Sem observação.</span>{{end}}</p>
+    {{- end}}
+  </div>
+
+  <div id="fotos">
+    <h3 class="section-h">Fotos</h3>
+    <div class="photos">
+      {{- range $p.Photos}}{{if not .Removed}}
+      <figure class="thumb">
+        <button type="button" class="thumb-img blurred" data-photo-view="/fotos/{{.ID}}" aria-label="Mostrar foto"><img src="/fotos/{{.ID}}" alt=""><span class="reveal">{{icon "eye"}}Mostrar</span></button>
+        <figcaption>{{.AddedAt | localTime}}</figcaption>
+        {{- if $.User.IsAdmin}}
+        <form method="post" action="/fotos/{{.ID}}/remover" data-confirm="Remover esta foto?" data-confirm-danger
+              data-confirm-body="A foto sai desta movimentação e o arquivo é apagado. O registro de alterações guarda quem removeu." data-confirm-label="Remover">
+          <button class="btn-icon remove-photo" type="submit" aria-label="Remover foto">{{icon "x"}}</button>
+        </form>
+        {{- end}}
+      </figure>
+      {{- end}}{{end}}
+      {{- if .User.IsAdmin}}
+      <form method="post" action="/movimentos/{{$p.MovementID}}/fotos" enctype="multipart/form-data">
+        <label class="photo-add">{{icon "camera"}}Adicionar foto<input type="file" name="photos" accept="image/*" multiple data-photo-input data-autoupload></label>
+      </form>
+      {{- else if eq $p.PhotoCount 0}}
+      <p class="hint">Sem fotos.</p>
+      {{- end}}
+    </div>
+  </div>
+
+  {{- with $p.LogRows}}
+  <div>
+    <h3 class="section-h">Registro de alterações</h3>
+    <ul class="log">
+      {{- range .}}<li><time>{{.At | localTime}}</time> · {{with .User}}{{.}}: {{end}}
+        {{- with .Change}}{{lower .Field}}: {{if .Old}}“{{.Old}}”{{else}}<em>(vazia)</em>{{end}} → {{if .New}}“{{.New}}”{{else}}<em>(vazia)</em>{{end}}{{else}}{{.Event}}{{end}}</li>{{end}}
+    </ul>
+  </div>
+  {{- end}}
+</div>
+
+<dialog id="dlg-photo" class="photo-viewer" aria-labelledby="dlg-photo-title">
+  <div class="dlg-head"><h2 id="dlg-photo-title">Foto</h2><button type="button" class="btn-icon" data-close-dialog aria-label="Fechar">{{icon "x"}}</button></div>
+  <div class="dlg-body"><img alt="Foto da movimentação"></div>
+</dialog>
+
+{{- if .User.IsAdmin}}
+{{- if $p.Reversible}}
+<form class="detail-actions" method="post" action="/movimentos/{{$p.MovementID}}/estorno"
+      data-confirm="Estornar esta {{if eq $p.Kind "in"}}entrada{{else}}saída{{end}}?" data-confirm-danger
+      data-confirm-body="{{$p.ReverseBody}}" data-confirm-label="Estornar">
+  <button class="btn btn-danger" type="submit">{{icon "undo"}}Estornar {{if eq $p.Kind "in"}}entrada{{else}}saída{{end}}</button>
+</form>
+{{- else if $p.ReverseBlockers}}
+<div class="card card-pad detail-actions">
+  <p><strong>Não dá para estornar:</strong> parte desta entrada já saiu do estoque.</p>
+  <ul class="blockers">
+    {{- range $p.ReverseBlockers}}<li>Lote {{.Lot}} ({{.Medicine}}): há {{qty .OnHand .Unit}}, o estorno retiraria {{.Needed}}.</li>{{end}}
+  </ul>
+  <p class="hint">Estorne antes as saídas que usaram esses lotes.</p>
+</div>
+{{- end}}
+{{- end}}
+{{end}}

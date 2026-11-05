@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}} · SAF</title>
+<link rel="icon" href="/static/favicon.svg?v={{.Static}}" type="image/svg+xml">
+<link rel="stylesheet" href="/static/app.css?v={{.Static}}">
+<script src="/static/app.js?v={{.Static}}"></script>
+</head>
+<body>
+<div class="app{{if not .User.ID}} is-login{{end}}">
+  <a class="skip" href="#conteudo">Pular para o conteúdo</a>
+
+  <header class="app-header">
+    <a class="brand" href="/estoque">
+      <span class="brand-mark">UNILAB</span>
+      <span class="brand-name">SAF</span>
+      <span class="brand-sub">Serviço de Apoio à Farmácia</span>
+    </a>
+    {{- if .User.ID}}
+    <div class="header-right">
+      {{- if not .User.IsAdmin}}
+      <span class="role-badge">{{icon "eye"}}<span class="role-text">Somente visualização</span></span>
+      {{- end}}
+      <button type="button" class="header-btn" id="theme-toggle" aria-label="Usar tema escuro">{{icon "moon"}}</button>
+      <div class="menu-wrap">
+        <button type="button" class="header-btn" data-menu aria-controls="user-menu" aria-expanded="false" aria-haspopup="true">
+          {{icon "user"}}<span class="user-name">{{.User.Name}}</span>
+        </button>
+        <div class="menu" id="user-menu" hidden>
+          <a href="/minha-senha">{{icon "key"}}Alterar minha senha</a>
+          <form method="post" action="/sair"><button type="submit">{{icon "logout"}}Sair</button></form>
+        </div>
+      </div>
+    </div>
+    {{- end}}
+  </header>
+
+  {{- if .User.ID}}
+  <nav class="tabs" aria-label="Seções">
+    <ul>
+      {{- range .Tabs}}
+      <li{{if .DeskOnly}} class="desk-only"{{end}}><a class="tab" href="{{.Path}}"{{if eq .Path $.Active}} aria-current="page"{{end}}>{{icon .Icon}}{{.Label}}</a></li>
+      {{- end}}
+      {{- if .MoreTabs}}
+      <li class="more menu-wrap">
+        <button type="button" class="more-btn" data-menu aria-controls="more-menu" aria-expanded="false" aria-haspopup="true">{{icon "more"}}Mais</button>
+        <div class="menu menu-up" id="more-menu" hidden>
+          {{- range .MoreTabs}}
+          <a href="{{.Path}}">{{icon .Icon}}{{.Label}}</a>
+          {{- end}}
+        </div>
+      </li>
+      {{- end}}
+    </ul>
+  </nav>
+  {{- end}}
+
+  <main id="conteudo" tabindex="-1">
+    {{block "content" .}}{{end}}
+  </main>
+</div>
+
+{{- with .Flash}}
+<div class="toasts" role="status"><div class="toast toast-{{.Kind}}">{{if eq .Kind "error"}}{{icon "alert"}}{{else}}{{icon "check"}}{{end}}<span>{{.Message}}</span></div></div>
+{{- end}}
+
+<dialog id="dlg-confirm" aria-labelledby="dlg-confirm-title">
+  <div class="dlg-head"><h2 id="dlg-confirm-title" data-confirm-title></h2></div>
+  <div class="dlg-body"><p data-confirm-body></p></div>
+  <div class="dlg-foot"><span></span><div class="actions">
+    <button type="button" class="btn" data-confirm-cancel>Cancelar</button>
+    <button type="button" class="btn btn-danger-solid" data-confirm-ok>Confirmar</button>
+  </div></div>
+</dialog>
+</body>
+</html>

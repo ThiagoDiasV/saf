@@ -1,0 +1,66 @@
+{{define "content"}}
+<div class="page-head"><div><h1>Usuários</h1><p>Cada pessoa tem o próprio login. O histórico registra quem fez cada movimento.</p></div></div>
+
+<div class="card clip">
+  <table class="data stack">
+    <thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Situação</th><th>Último acesso</th><th><span class="sr-only">Ações</span></th></tr></thead>
+    <tbody>
+    {{- range .Page.Users}}
+      <tr>
+        <td data-label="Nome"><strong>{{.Name}}</strong>{{if eq .ID $.User.ID}} <span class="badge badge-neutral">você</span>{{end}}</td>
+        <td data-label="Login">{{.Login}}</td>
+        <td data-label="Perfil">{{roleLabel .Role}}</td>
+        <td data-label="Situação">{{if .Active}}<span class="badge badge-ok">{{icon "check"}}Ativo</span>{{else}}<span class="badge badge-neutral">Desativado</span>{{end}}</td>
+        <td data-label="Último acesso" class="tnum">{{lastLogin .LastLoginAt}}</td>
+        <td class="actions-cell"><div class="actions">
+          {{- if eq .ID $.User.ID}}
+          <a class="btn btn-ghost" href="/minha-senha">{{icon "key"}}Alterar minha senha</a>
+          {{- else}}
+          <a class="btn btn-ghost" href="/usuarios/{{.ID}}/senha">{{icon "key"}}Redefinir senha</a>
+          {{- if .Active}}
+          <form method="post" action="/usuarios/{{.ID}}/ativo" data-confirm="Desativar {{.Name}}?" data-confirm-danger
+                data-confirm-body="A pessoa não consegue mais entrar. O histórico continua mostrando o nome dela nas movimentações."
+                data-confirm-label="Desativar">
+            <input type="hidden" name="active" value="0"><button class="btn btn-danger" type="submit">Desativar</button>
+          </form>
+          {{- else}}
+          <form method="post" action="/usuarios/{{.ID}}/ativo">
+            <input type="hidden" name="active" value="1"><button class="btn" type="submit">Reativar</button>
+          </form>
+          {{- end}}
+          {{- end}}
+        </div></td>
+      </tr>
+    {{- end}}
+    </tbody>
+  </table>
+</div>
+
+<form class="card" method="post" action="/usuarios" novalidate>
+  <div class="card-pad stack-lg">
+    <h2>Novo usuário</h2>
+    <div class="form-grid">
+      <label class="field"><span>Nome</span>
+        <input name="name" value="{{.Page.New.Name}}" autocomplete="off"{{if .Errors.name}} aria-invalid="true"{{end}}>
+        {{- with .Errors.name}}<span class="field-error">{{icon "alert"}}{{.}}</span>{{end}}
+      </label>
+      <label class="field"><span>Login</span>
+        <input name="login" value="{{.Page.New.Login}}" autocomplete="off" autocapitalize="none" spellcheck="false"{{if .Errors.login}} aria-invalid="true"{{end}}>
+        <span class="hint">Letras minúsculas, números e ponto. Ex.: joao.silva</span>
+        {{- with .Errors.login}}<span class="field-error">{{icon "alert"}}{{.}}</span>{{end}}
+      </label>
+      <label class="field"><span>Senha inicial</span>
+        <input name="password" type="password" autocomplete="new-password"{{if .Errors.password}} aria-invalid="true"{{end}}>
+        <span class="hint">Mínimo de 12 caracteres. Entregue pessoalmente.</span>
+        {{- with .Errors.password}}<span class="field-error">{{icon "alert"}}{{.}}</span>{{end}}
+      </label>
+      <fieldset><legend>Perfil</legend>
+        <label class="check"><input type="radio" name="role" value="viewer"{{if ne .Page.New.Role "admin"}} checked{{end}}>Visualização: vê estoque e histórico</label>
+        <label class="check"><input type="radio" name="role" value="admin"{{if eq .Page.New.Role "admin"}} checked{{end}}>Administrador: faz tudo</label>
+        {{- with .Errors.role}}<span class="field-error">{{icon "alert"}}{{.}}</span>{{end}}
+      </fieldset>
+    </div>
+  </div>
+  <div class="form-foot"><button class="btn btn-primary" type="submit">{{icon "plus"}}Criar usuário</button></div>
+</form>
+{{end}}

@@ -1,0 +1,66 @@
+{{define "content"}}
+<div class="page-head">
+  <div><h1>Histórico</h1>
+    <p>Mais recentes primeiro · {{.Page.Total}} {{if eq .Page.Total 1}}movimentação{{else}}movimentações{{end}} no filtro · nomes com mais de 6 meses são apagados</p></div>
+  <div class="actions"><a class="btn" href="{{.Page.CSVURL}}">{{icon "download"}}Exportar CSV</a></div>
+</div>
+
+<form class="card filters" method="get" action="/historico" role="search">
+  <label class="field field-date"><span>De</span><input type="date" name="de" value="{{.Page.Form.From}}"></label>
+  <label class="field field-date"><span>Até</span><input type="date" name="ate" value="{{.Page.Form.To}}"></label>
+  <label class="field field-type"><span>Tipo</span>
+    <select name="tipo">
+      <option value=""{{if eq .Page.Form.Type ""}} selected{{end}}>Todos</option>
+      <optgroup label="Entradas">
+        <option value="in"{{if eq .Page.Form.Type "in"}} selected{{end}}>Todas as entradas</option>
+        {{- range .Page.EntryTypes}}<option value="in:{{.}}"{{if eq $.Page.Form.Type (printf "in:%s" .)}} selected{{end}}>{{.}}</option>{{end}}
+      </optgroup>
+      <optgroup label="Saídas">
+        <option value="out"{{if eq .Page.Form.Type "out"}} selected{{end}}>Todas as saídas</option>
+        {{- range .Page.ExitTypes}}<option value="out:{{.}}"{{if eq $.Page.Form.Type (printf "out:%s" .)}} selected{{end}}>{{.}}</option>{{end}}
+      </optgroup>
+      <optgroup label="Correções">
+        <option value="reversal"{{if eq .Page.Form.Type "reversal"}} selected{{end}}>Estornos</option>
+        <option value="adjust"{{if eq .Page.Form.Type "adjust"}} selected{{end}}>Ajustes</option>
+      </optgroup>
+    </select>
+  </label>
+  <label class="field"><span>Medicamento</span><input name="medicamento" list="dl-meds" value="{{.Page.Form.Medicine}}" autocomplete="off"></label>
+  <label class="field field-lot"><span>Lote</span><input name="lote" value="{{.Page.Form.Lot}}" autocomplete="off"></label>
+  <label class="field"><span>Dispensado para</span><input name="paciente" value="{{.Page.Form.PatientName}}" autocomplete="off"></label>
+  <div class="actions"><button class="btn btn-primary" type="submit">Filtrar</button><a class="btn" href="/historico">Limpar</a></div>
+</form>
+
+<div class="card clip">
+{{- if .Page.Rows}}
+  <table class="data stack">
+    <thead><tr><th>Data</th><th>Movimento</th><th>Itens</th><th>Dispensado para</th><th class="num">Fotos</th><th>Usuário</th><th><span class="sr-only">Ações</span></th></tr></thead>
+    <tbody>
+    {{- range .Page.Rows}}
+      <tr{{if .ReversedByID}} class="is-reversed"{{end}}>
+        <td data-label="Data" class="tnum">{{.When}}{{with .Recorded}}<span class="cell-sub">{{.}}</span>{{end}}</td>
+        <td data-label="Movimento"><span class="mv">{{icon .Icon}}{{.Label}}</span><span class="cell-sub">{{.Subtitle}}{{if .ReversedByID}} <span class="badge badge-neutral">Estornada</span>{{end}}</span></td>
+        <td data-label="Itens">{{.First}}{{with .More}}<span class="cell-sub">{{.}}</span>{{end}}{{with .NoteShort}}<span class="cell-sub">{{.}}</span>{{end}}</td>
+        <td data-label="Dispensado para">{{with .PatientName}}{{.}}{{else}}—{{end}}</td>
+        <td data-label="Fotos" class="num">{{if .MovementID}}{{.PhotoCount}}{{end}}</td>
+        <td data-label="Usuário">{{.UserFirst}}</td>
+        <td class="actions-cell">{{if .MovementID}}<a class="btn" href="/movimentos/{{.MovementID}}">Detalhes</a>{{end}}</td>
+      </tr>
+    {{- end}}
+    </tbody>
+  </table>
+{{- else}}
+  <div class="empty">{{icon "search"}}<p>Nenhuma movimentação com esses filtros.</p></div>
+{{- end}}
+</div>
+
+{{- with .Page.Pager}}
+<nav class="pager" aria-label="Paginação">
+  {{- range .}}
+  {{- if .Disabled}}<span aria-disabled="true">{{.Label}}</span>
+  {{- else}}<a href="{{.URL}}"{{if .Current}} aria-current="page"{{end}}>{{.Label}}</a>{{end}}
+  {{- end}}
+</nav>
+{{- end}}
+<datalist id="dl-meds">{{range .Page.Medicines}}<option value="{{.Label}}">{{end}}</datalist>
+{{end}}

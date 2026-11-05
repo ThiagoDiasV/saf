@@ -1,0 +1,32 @@
+{{define "content"}}
+<div class="login-wrap">
+  <form class="card card-pad login-card" method="post" action="/configurar" novalidate>
+    <div class="brand-block">
+      <span class="brand-mark">UNILAB</span>
+      <h1>Configure o administrador</h1>
+      <p class="hint">O login <strong>admin</strong> serve só para este primeiro acesso e deixa de funcionar depois dele. Informe os dados de quem vai administrar o SAF.</p>
+    </div>
+    <div class="stack-lg">
+      <label class="field"><span>Nome</span>
+        <input name="name" value="{{.Page.Name}}" autocomplete="name" autofocus{{if .Errors.name}} aria-invalid="true"{{end}}>
+        {{- with .Errors.name}}<span class="field-error">{{icon "alert"}}{{.}}</span>{{end}}
+      </label>
+      <label class="field"><span>Login</span>
+        <input name="login" value="{{.Page.Login}}" autocomplete="username" autocapitalize="none" spellcheck="false"{{if .Errors.login}} aria-invalid="true"{{end}}>
+        <span class="hint">Letras minúsculas, números e ponto. Ex.: joao.silva</span>
+        {{- with .Errors.login}}<span class="field-error">{{icon "alert"}}{{.}}</span>{{end}}
+      </label>
+      <label class="field"><span>Senha</span>
+        <input name="password" type="password" autocomplete="new-password"{{if .Errors.password}} aria-invalid="true"{{end}}>
+        <span class="hint">Mínimo de 12 caracteres.</span>
+        {{- with .Errors.password}}<span class="field-error">{{icon "alert"}}{{.}}</span>{{end}}
+      </label>
+      <label class="field"><span>Repita a senha</span>
+        <input name="confirm" type="password" autocomplete="new-password"{{if .Errors.confirm}} aria-invalid="true"{{end}}>
+        {{- with .Errors.confirm}}<span class="field-error">{{icon "alert"}}{{.}}</span>{{end}}
+      </label>
+      <button class="btn btn-primary btn-block" type="submit">{{icon "check"}}Salvar e entrar</button>
+    </div>
+  </form>
+</div>
+{{end}}

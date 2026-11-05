@@ -1,0 +1,27 @@
+{{define "content"}}
+<div class="page-head"><div><h1>Editar lote</h1><p>{{.Page.Medicine.Label}} · {{.Page.Batch.OnHand}} em estoque</p></div></div>
+<form class="card" method="post" action="/lotes/{{.Page.Batch.ID}}" novalidate>
+  <div class="card-pad stack-lg">
+    <div class="form-grid">
+      <label class="field"><span>Lote</span>
+        <input name="lot" value="{{.Page.Values.Lot}}" autocomplete="off" autocapitalize="characters"{{if .Errors.lot}} aria-invalid="true"{{end}}>
+        {{- with .Errors.lot}}<span class="field-error">{{icon "alert"}}{{.}}</span>{{end}}
+      </label>
+      <label class="field"><span>Fabricante</span>
+        <input name="manufacturer" list="dl-fabricantes" value="{{.Page.Values.Manufacturer}}" autocomplete="off"{{if .Errors.manufacturer}} aria-invalid="true"{{end}}>
+        {{- with .Errors.manufacturer}}<span class="field-error">{{icon "alert"}}{{.}}</span>{{end}}
+      </label>
+      <label class="field"><span>Validade</span>
+        <input name="expiry" value="{{.Page.Values.Expiry}}" inputmode="numeric" placeholder="MM/AAAA" maxlength="7" data-mask="expiry" autocomplete="off"{{if .Errors.expiry}} aria-invalid="true"{{end}}>
+        {{- with .Errors.expiry}}<span class="field-error">{{icon "alert"}}{{.}}</span>{{end}}
+      </label>
+    </div>
+    <p class="hint">Use para corrigir erros de digitação. O histórico guarda o valor antigo e o novo.</p>
+  </div>
+  <div class="form-foot">
+    <a class="btn" href="/estoque#med-{{.Page.Medicine.ID}}">Cancelar</a>
+    <button class="btn btn-primary" type="submit">{{icon "check"}}Salvar</button>
+  </div>
+</form>
+<datalist id="dl-fabricantes">{{range .Page.Manufacturers}}<option value="{{.}}">{{end}}</datalist>
+{{end}}

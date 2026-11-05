@@ -1,0 +1,28 @@
+{{define "content"}}
+<div class="login-wrap">
+  <form class="card card-pad login-card" method="post" action="/login" novalidate>
+    <div class="brand-block">
+      <span class="brand-mark">UNILAB</span>
+      <h1>SAF</h1>
+      <p class="hint">Serviço de Apoio à Farmácia</p>
+    </div>
+    <div class="stack-lg">
+      <label class="field"><span>Usuário</span>
+        <input name="login" value="{{.Page.Login}}" autocomplete="username" autocapitalize="none" spellcheck="false" required{{if not .Page.Login}} autofocus{{end}}>
+      </label>
+      <div class="field">
+        <label class="field-label" for="login-senha">Senha</label>
+        <div class="pw">
+          <input id="login-senha" name="password" type="password" autocomplete="current-password" required{{if .Page.Login}} autofocus{{end}}>
+          <button type="button" class="btn-icon" data-toggle-password="login-senha" aria-label="Mostrar senha" aria-pressed="false">{{icon "eye"}}</button>
+        </div>
+      </div>
+      {{- with .Page.Error}}
+      <p class="field-error" role="alert">{{icon "alert"}}{{.}}</p>
+      {{- end}}
+      <button class="btn btn-primary btn-block" type="submit">Entrar</button>
+      <p class="hint center">Esqueceu a senha? Fale com o administrador.</p>
+    </div>
+  </form>
+</div>
+{{end}}

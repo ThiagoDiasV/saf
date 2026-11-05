@@ -1,0 +1,13 @@
+# Copies SAF's sealed photo files to the backup bucket, deletions included, so the 6-month
+# deletion reaches the bucket too (docs/PLAN.md §6). Installed on the VM by docs/DEPLOY.md.
+[Unit]
+Description=Copy SAF photos to the backup bucket
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/saf/backup.env
+# .tmp-* files are photos still being written.
+ExecStart=/usr/bin/gcloud storage rsync --recursive --delete-unmatched-destination-objects \
+  --exclude='^\.tmp-' /srv/saf/data/photos gs://${SAF_BUCKET}/photos

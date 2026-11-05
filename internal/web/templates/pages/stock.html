@@ -1,0 +1,69 @@
+{{define "content"}}
+<div class="page-head">
+  <div><h1>Estoque</h1><p>{{.Page.Counts.Medicines}} {{if eq .Page.Counts.Medicines 1}}medicamento{{else}}medicamentos{{end}} · {{.Page.Counts.Batches}} {{if eq .Page.Counts.Batches 1}}lote{{else}}lotes{{end}} · hoje, {{.Page.Today}}</p></div>
+  <div class="actions">
+    <a class="btn" href="{{.Page.CSVURL}}">{{icon "download"}}Exportar CSV</a>
+    {{- if .User.IsAdmin}}
+    <a class="btn" href="/entrada">{{icon "in"}}Nova entrada</a>
+    <a class="btn btn-primary" href="/saida">{{icon "out"}}Nova saída</a>
+    {{- end}}
+  </div>
+</div>
+
+<form class="card filters" method="get" action="/estoque" role="search" data-autosubmit>
+  <label class="field"><span>Buscar</span><input type="search" name="q" value="{{.Page.Filter.Query}}" placeholder="Medicamento, lote ou fabricante"></label>
+  <fieldset>
+    <legend>Validade</legend>
+    <div class="segmented">
+      <label><input type="radio" name="validade" value=""{{if eq .Page.Filter.Validity ""}} checked{{end}}><span>Todos</span></label>
+      <label><input type="radio" name="validade" value="vencendo"{{if eq .Page.Filter.Validity "vencendo"}} checked{{end}}><span>Vencendo <span class="count">{{.Page.Counts.Expiring}}</span></span></label>
+      <label><input type="radio" name="validade" value="vencidos"{{if eq .Page.Filter.Validity "vencidos"}} checked{{end}}><span>Vencidos <span class="count">{{.Page.Counts.Expired}}</span></span></label>
+    </div>
+  </fieldset>
+  <button class="btn" type="submit">{{icon "search"}}Buscar</button>
+</form>
+
+{{- if .Page.Groups}}
+<div class="list-toolbar"><button type="button" class="btn btn-ghost" data-toggle-groups>Expandir todos</button></div>
+{{- range .Page.Groups}}
+{{- if eq .Total 0}}
+<div class="card med"><div class="med-head">
+  <span class="med-title"><span class="chev-space" aria-hidden="true"></span><span><span class="med-name">{{.Medicine.Ingredient}}</span> <span class="med-meta">{{.Medicine.Strength}} · {{lower .Medicine.DosageForm}}</span></span></span>
+  <span class="badge badge-neutral">{{icon "box"}}Sem estoque</span>
+</div></div>
+{{- else}}
+<details class="card med" id="med-{{.Medicine.ID}}"{{if $.Page.Filter.Filtering}} open{{end}}>
+  <summary class="med-head">
+    <span class="med-title"><svg class="icon chev" aria-hidden="true"><use href="/static/icons.svg?v={{$.Static}}#i-chevron"/></svg><span><span class="med-name">{{.Medicine.Ingredient}}</span> <span class="med-meta">{{.Medicine.Strength}} · {{lower .Medicine.DosageForm}}</span></span></span>
+    <span class="med-side">
+      {{- if .ExpiredBatches}}<span class="badge badge-danger">{{icon "expired"}}{{.ExpiredBatches}} {{if gt .ExpiredBatches 1}}lotes vencidos{{else}}lote vencido{{end}}</span>{{end}}
+      {{- if .ExpiringBatches}}<span class="badge badge-warn">{{icon "alert"}}{{.ExpiringBatches}} {{if gt .ExpiringBatches 1}}lotes vencendo{{else}}lote vencendo{{end}}</span>{{end}}
+      <span class="med-count">{{.BatchCount}} {{if gt .BatchCount 1}}lotes{{else}}lote{{end}}</span>
+      <span class="med-total">{{qty .Total .Medicine.Unit}}
+        {{- if .ExpiredUnits}}<small>{{qty .ExpiredUnits .Medicine.Unit}} em {{if gt .ExpiredBatches 1}}lotes vencidos{{else}}lote vencido{{end}}, não dispensáveis</small>{{end}}</span>
+    </span>
+  </summary>
+  <table class="data stack stock-table">
+    <thead><tr><th>Lote</th><th>Fabricante</th><th>Validade</th><th class="num">Quantidade</th><th>Situação</th>{{if $.User.IsAdmin}}<th><span class="sr-only">Ações</span></th>{{end}}</tr></thead>
+    <tbody>
+    {{- range .Batches}}
+      <tr{{if .Expired}} class="is-expired"{{else if .Expiring}} class="is-expiring"{{end}}>
+        <td data-label="Lote">{{.Lot}}</td>
+        <td data-label="Fabricante">{{.Manufacturer}}</td>
+        <td data-label="Validade" class="tnum">{{.Expiry}}</td>
+        <td data-label="Quantidade" class="num">{{.OnHand}}</td>
+        <td data-label="Situação">{{template "expiry-badge" .}}</td>
+        {{- if $.User.IsAdmin}}
+        <td class="actions-cell"><a class="btn-icon" href="/lotes/{{.ID}}/editar" aria-label="Editar lote {{.Lot}}">{{icon "edit"}}</a></td>
+        {{- end}}
+      </tr>
+    {{- end}}
+    </tbody>
+  </table>
+</details>
+{{- end}}
+{{- end}}
+{{- else}}
+<div class="card empty">{{icon "search"}}<p>Nenhum medicamento encontrado.</p></div>
+{{- end}}
+{{end}}

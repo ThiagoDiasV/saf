@@ -1,0 +1,11 @@
+# Runs saf-photos-backup.service every hour: at most an hour of photos lost with the VM.
+[Unit]
+Description=Hourly copy of SAF photos to the backup bucket
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

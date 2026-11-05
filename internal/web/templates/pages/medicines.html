@@ -1,0 +1,62 @@
+{{define "content"}}
+<div class="page-head"><div><h1>Medicamentos</h1><p>Cada item é princípio ativo + concentração + forma farmacêutica.</p></div></div>
+
+<form class="card" method="post" action="/medicamentos" novalidate>
+  <div class="card-pad stack-lg">
+    <h2>Novo medicamento</h2>
+    <div class="form-grid">{{template "medicine-fields" .}}</div>
+  </div>
+  <div class="form-foot">
+    <a class="btn" href="/medicamentos">Limpar</a>
+    <button class="btn btn-primary" type="submit">{{icon "plus"}}Cadastrar</button>
+  </div>
+</form>
+
+<div class="card clip">
+  <form class="filters" method="get" action="/medicamentos" role="search" data-autosubmit>
+    <label class="field"><span>Buscar</span><input type="search" name="q" value="{{.Page.Query}}" placeholder="Princípio ativo"></label>
+    <label class="check"><input type="checkbox" name="arquivados" value="1"{{if .Page.IncludeArchived}} checked{{end}}>Mostrar arquivados</label>
+    <button class="btn" type="submit">{{icon "search"}}Buscar</button>
+  </form>
+  {{- if .Page.Medicines}}
+  <table class="data stack">
+    <thead><tr><th>Medicamento</th><th>Unidade</th><th class="num">Em estoque</th><th><span class="sr-only">Ações</span></th></tr></thead>
+    <tbody>
+    {{- range .Page.Medicines}}
+      <tr>
+        <td data-label="Medicamento"><strong>{{.Ingredient}}</strong> {{.Strength}} · {{lower .DosageForm}}
+          {{- if .Archived}} <span class="badge badge-neutral">Arquivado</span>{{end}}
+          {{- if not .Moved}}<span class="cell-sub">Nunca movimentado</span>{{end}}</td>
+        <td data-label="Unidade">{{.Unit}}</td>
+        <td data-label="Em estoque" class="num">{{.OnHand}}</td>
+        <td class="actions-cell"><div class="actions">
+        {{- if .Archived}}
+          <form method="post" action="/medicamentos/{{.ID}}/restaurar"><button class="btn" type="submit">{{icon "undo"}}Restaurar</button></form>
+        {{- else}}
+          <a class="btn btn-ghost" href="/medicamentos/{{.ID}}/editar">{{icon "edit"}}Editar</a>
+          {{- if not .Moved}}
+          <form method="post" action="/medicamentos/{{.ID}}/excluir" data-confirm="Excluir {{.Label}}?" data-confirm-danger
+                data-confirm-body="Ele nunca teve entrada nem saída, então sai do catálogo de vez." data-confirm-label="Excluir">
+            <button class="btn btn-danger" type="submit">{{icon "trash"}}Excluir</button>
+          </form>
+          {{- else if gt .OnHand 0}}
+          <button class="btn" type="button" aria-disabled="true" aria-describedby="arch-{{.ID}}">{{icon "archive"}}Arquivar</button>
+          <span class="hint actions-note" id="arch-{{.ID}}">Zere o estoque para arquivar</span>
+          {{- else}}
+          <form method="post" action="/medicamentos/{{.ID}}/arquivar" data-confirm="Arquivar {{.Label}}?"
+                data-confirm-body="Ele some do Estoque e das telas de Entrada e Saída. O histórico continua mostrando as movimentações dele, e dá para restaurar depois."
+                data-confirm-label="Arquivar">
+            <button class="btn" type="submit">{{icon "archive"}}Arquivar</button>
+          </form>
+          {{- end}}
+        {{- end}}
+        </div></td>
+      </tr>
+    {{- end}}
+    </tbody>
+  </table>
+  {{- else}}
+  <div class="empty">{{icon "search"}}<p>Nenhum medicamento encontrado.</p></div>
+  {{- end}}
+</div>
+{{end}}

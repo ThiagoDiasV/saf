@@ -1,0 +1,13 @@
+{{define "content"}}
+<div class="page-head"><div><h1>Editar medicamento</h1><p>{{.Page.Medicine.Label}}</p></div></div>
+<form class="card" method="post" action="/medicamentos/{{.Page.Medicine.ID}}" novalidate>
+  <div class="card-pad stack-lg">
+    <div class="form-grid">{{template "medicine-fields" .}}</div>
+    <p class="hint">Use para corrigir erros de digitação. A mudança aparece em todo o histórico deste medicamento e fica registrada.</p>
+  </div>
+  <div class="form-foot">
+    <a class="btn" href="/medicamentos">Cancelar</a>
+    <button class="btn btn-primary" type="submit">{{icon "check"}}Salvar</button>
+  </div>
+</form>
+{{end}}

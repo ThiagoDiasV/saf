@@ -1,0 +1,45 @@
+{{define "content"}}
+<div class="page-head"><div><h1>Nova saída</h1><p>Os lotes vêm preenchidos pela menor validade. Ajuste se precisar.</p></div></div>
+<form class="card" method="post" action="/saida" enctype="multipart/form-data" novalidate data-exit-form>
+  <div class="card-pad stack-lg">
+    <div class="form-grid">
+      <label class="field"><span>Tipo de saída</span>
+        <select name="type" data-exit-type{{if .Errors.type}} aria-invalid="true"{{end}}>
+          <option value="">Selecione…</option>
+          {{- range .Page.Types}}<option{{if eq . $.Page.Exit.Type}} selected{{end}}>{{.}}</option>{{end}}
+        </select>
+        {{- with .Errors.type}}<span class="field-error">{{icon "alert"}}{{.}}</span>{{end}}
+      </label>
+      <label class="field"><span>Data</span>
+        <input type="date" name="date" value="{{.Page.Exit.Date}}" max="{{.Page.Today}}"{{if .Errors.date}} aria-invalid="true"{{end}}>
+        {{- with .Errors.date}}<span class="field-error">{{icon "alert"}}{{.}}</span>{{end}}
+      </label>
+      <label class="field" id="field-patient"{{if ne .Page.Exit.Type "Dispensação"}} hidden{{end}}>
+        <span>Dispensado para <span class="optional">(opcional)</span></span>
+        <input name="patient_name" value="{{.Page.Exit.PatientName}}" autocomplete="off" maxlength="20"{{if .Errors.patient_name}} aria-invalid="true"{{end}}>
+        <span class="hint">Só o primeiro nome. Sem sobrenome nem CPF. Apagado após 6 meses.</span>
+        {{- with .Errors.patient_name}}<span class="field-error">{{icon "alert"}}{{.}}</span>{{end}}
+      </label>
+    </div>
+    <div role="group" aria-labelledby="saida-linhas">
+      <div class="section-title"><h2 id="saida-linhas">Medicamentos</h2></div>
+      <div id="exit-lines" data-next-index="{{.Page.NextIndex}}">
+        {{- range .Page.Lines}}{{template "exit-line" .}}{{end}}
+      </div>
+      <button type="button" class="btn btn-ghost add-line" data-add-exit-line>{{icon "plus"}}Adicionar medicamento</button>
+    </div>
+    <label class="field"><span>Observação <span class="optional">(opcional)</span></span>
+      <textarea name="note" placeholder="Ex.: setor, motivo da perda"{{if .Errors.note}} aria-invalid="true"{{end}}>{{.Page.Exit.Note}}</textarea>
+      <span class="hint">Não escreva dados de pacientes aqui.</span>
+      {{- with .Errors.note}}<span class="field-error">{{icon "alert"}}{{.}}</span>{{end}}
+    </label>
+    {{template "photo-picker" (photoPicker "A foto da receita substitui a segunda via para isentos de prescrição. Apagada após 6 meses." (index .Errors "photos"))}}
+  </div>
+  <div class="form-foot">
+    <a class="btn" href="/saida">Limpar</a>
+    <button class="btn btn-primary" type="submit">{{icon "check"}}Salvar saída</button>
+  </div>
+</form>
+<template id="exit-line-template">{{template "exit-line" blankExitLine}}</template>
+<datalist id="dl-meds">{{range .Page.Medicines}}<option value="{{.Label}}" data-unit="{{plural .Unit 2}}" data-unit-one="{{.Unit}}">{{end}}</datalist>
+{{end}}

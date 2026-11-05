@@ -1,0 +1,36 @@
+{{define "expiry-badge"}}
+{{- if .Expired}}<span class="badge badge-danger">{{icon "expired"}}VENCIDO</span>
+{{- else if .Expiring}}<span class="badge badge-warn">{{icon "alert"}}{{if eq .DaysLeft 0}}vence hoje{{else}}vence em {{.DaysLeft}} {{if eq .DaysLeft 1}}dia{{else}}dias{{end}}{{end}}</span>
+{{- end}}
+{{- end}}
+
+{{define "entry-line"}}
+<div class="line">
+  <label class="cell cell-med"><span class="cell-label">Medicamento</span>
+    <input name="medicine" list="dl-meds" value="{{.Line.Medicine}}" autocomplete="off" placeholder="Digite para buscar"{{if .Invalid.medicine}} aria-invalid="true"{{end}}></label>
+  <label class="cell"><span class="cell-label">Lote</span>
+    <input name="lot" value="{{.Line.Lot}}" autocomplete="off" autocapitalize="characters"{{if .Invalid.lot}} aria-invalid="true"{{end}}></label>
+  <label class="cell"><span class="cell-label">Fabricante</span>
+    <input name="manufacturer" list="dl-fabricantes" value="{{.Line.Manufacturer}}" autocomplete="off"{{if .Invalid.manufacturer}} aria-invalid="true"{{end}}></label>
+  <label class="cell"><span class="cell-label">Validade</span>
+    <input name="expiry" value="{{.Line.Expiry}}" inputmode="numeric" placeholder="MM/AAAA" maxlength="7" data-mask="expiry" autocomplete="off"{{if .Invalid.expiry}} aria-invalid="true"{{end}}></label>
+  <label class="cell cell-qty"><span class="cell-label">Quantidade</span>
+    <span class="qty"><input name="quantity" type="number" min="1" step="1" inputmode="numeric" value="{{.Line.Quantity}}"{{if .Invalid.quantity}} aria-invalid="true"{{end}}><span class="unit">unidades</span></span></label>
+  <button type="button" class="btn-icon remove-line" data-remove-line aria-label="Remover este medicamento">{{icon "x"}}</button>
+  {{- with .Errors}}
+  <div class="line-errors">{{range .}}<p class="field-error">{{icon "alert"}}{{.}}</p>{{end}}</div>
+  {{- end}}
+</div>
+{{end}}
+
+{{define "photo-picker"}}
+<div class="field" id="fotos">
+  <span class="field-label">Fotos <span class="optional">(opcional)</span></span>
+  <div class="photos">
+    <div class="photo-previews" data-photo-previews></div>
+    <label class="photo-add">{{icon "camera"}}Tirar ou anexar foto<input type="file" name="photos" accept="image/*" multiple data-photo-input></label>
+  </div>
+  <span class="hint">{{.Hint}}</span>
+  {{- with .Error}}<span class="field-error">{{icon "alert"}}{{.}}</span>{{end}}
+</div>
+{{end}}

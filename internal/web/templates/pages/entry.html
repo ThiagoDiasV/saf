@@ -1,0 +1,42 @@
+{{define "content"}}
+<div class="page-head"><div><h1>Nova entrada</h1><p>Uma entrada pode ter vários medicamentos.</p></div></div>
+<form class="card" method="post" action="/entrada" enctype="multipart/form-data" novalidate>
+  <div class="card-pad stack-lg">
+    <div class="form-grid">
+      <label class="field"><span>Tipo de entrada</span>
+        <select name="type"{{if .Errors.type}} aria-invalid="true"{{end}}>
+          <option value="">Selecione…</option>
+          {{- range .Page.Types}}<option{{if eq . $.Page.Entry.Type}} selected{{end}}>{{.}}</option>{{end}}
+        </select>
+        {{- with .Errors.type}}<span class="field-error">{{icon "alert"}}{{.}}</span>{{end}}
+      </label>
+      <label class="field"><span>Data</span>
+        <input type="date" name="date" value="{{.Page.Entry.Date}}" max="{{.Page.Today}}"{{if .Errors.date}} aria-invalid="true"{{end}}>
+        <span class="hint">Pode ser uma data passada. O histórico também mostra quando foi registrada.</span>
+        {{- with .Errors.date}}<span class="field-error">{{icon "alert"}}{{.}}</span>{{end}}
+      </label>
+    </div>
+    <div role="group" aria-labelledby="entrada-linhas">
+      <div class="section-title"><h2 id="entrada-linhas">Medicamentos</h2></div>
+      <div class="lines-head" aria-hidden="true"><span>Medicamento</span><span>Lote</span><span>Fabricante</span><span>Validade</span><span>Quantidade</span><span></span></div>
+      <div id="entry-lines">
+        {{- range $i, $l := .Page.Entry.Lines}}{{template "entry-line" (entryLine $.Errors $i $l)}}{{end}}
+      </div>
+      <button type="button" class="btn btn-ghost" data-add-line="entry-line-template" data-lines="entry-lines">{{icon "plus"}}Adicionar medicamento</button>
+    </div>
+    <label class="field"><span>Observação <span class="optional">(obrigatória quando o tipo é Outros)</span></span>
+      <textarea name="note" placeholder="Ex.: de onde veio, número da nota"{{if .Errors.note}} aria-invalid="true"{{end}}>{{.Page.Entry.Note}}</textarea>
+      <span class="hint">Não escreva dados de pacientes aqui.</span>
+      {{- with .Errors.note}}<span class="field-error">{{icon "alert"}}{{.}}</span>{{end}}
+    </label>
+    {{template "photo-picker" (photoPicker "No celular dá para usar a câmera. As fotos são reduzidas antes de salvar e apagadas após 6 meses." (index .Errors "photos"))}}
+  </div>
+  <div class="form-foot">
+    <a class="btn" href="/entrada">Limpar</a>
+    <button class="btn btn-primary" type="submit">{{icon "check"}}Salvar entrada</button>
+  </div>
+</form>
+<template id="entry-line-template">{{template "entry-line" blankEntryLine}}</template>
+<datalist id="dl-meds">{{range .Page.Medicines}}<option value="{{.Label}}" data-unit="{{plural .Unit 2}}" data-unit-one="{{.Unit}}">{{end}}</datalist>
+<datalist id="dl-fabricantes">{{range .Page.Manufacturers}}<option value="{{.}}">{{end}}</datalist>
+{{end}}

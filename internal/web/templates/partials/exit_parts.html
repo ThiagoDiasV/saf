@@ -1,0 +1,50 @@
+{{define "expiry-badge-short"}}
+{{- if .Expired}}<span class="badge badge-danger">{{icon "expired"}}VENCIDO</span>
+{{- else if .Expiring}}<span class="badge badge-warn">{{icon "alert"}}{{if eq .DaysLeft 0}}vence hoje{{else}}{{.DaysLeft}} {{if eq .DaysLeft 1}}dia{{else}}dias{{end}}{{end}}</span>
+{{- end}}
+{{- end}}
+
+{{define "exit-line"}}
+<div class="exit-line" data-index="{{.Index}}">
+  <div class="exit-line-head">
+    <label class="field grow"><span>Medicamento</span>
+      <input name="lines.{{.Index}}.medicine" list="dl-meds" value="{{.Line.Medicine}}" autocomplete="off" placeholder="Digite para buscar" data-exit-medicine{{if .Invalid.medicine}} aria-invalid="true"{{end}}></label>
+    <label class="field"><span>Quantidade</span>
+      <span class="qty"><input name="lines.{{.Index}}.quantity" type="number" min="1" step="1" inputmode="numeric" value="{{.Line.Quantity}}" data-exit-quantity{{if .Invalid.quantity}} aria-invalid="true"{{end}}><span class="unit">{{if .Medicine.ID}}{{plural .Medicine.Unit 2}}{{else}}unidades{{end}}</span></span></label>
+    <button type="button" class="btn-icon" data-remove-exit-line aria-label="Remover este medicamento">{{icon "x"}}</button>
+  </div>
+  {{- with .Errors}}
+  <div class="line-errors exit-line-errors">{{range .}}<p class="field-error">{{icon "alert"}}{{.}}</p>{{end}}</div>
+  {{- end}}
+  <div class="fefo">{{template "exit-fefo" .}}</div>
+</div>
+{{end}}
+
+{{define "exit-fefo"}}
+{{- if .Medicine.ID}}
+{{- if .Batches}}
+<p class="hint fefo-hint">Preenchido pela menor validade (FEFO). Mude as quantidades se o lote em mãos for outro.</p>
+<table class="data stack">
+  <thead><tr><th>Lote</th><th>Fabricante</th><th>Validade</th><th class="num">Em estoque</th><th class="num">Retirar</th></tr></thead>
+  <tbody>
+  {{- range .Batches}}
+    <tr{{if .Expired}} class="is-expired"{{else if .Expiring}} class="is-expiring"{{end}} data-stock="{{.OnHand}}">
+      <td data-label="Lote">{{.Lot}}</td>
+      <td data-label="Fabricante">{{.Manufacturer}}</td>
+      <td data-label="Validade"><span><span class="tnum">{{.Expiry}}</span> {{template "expiry-badge-short" .Batch}}</span></td>
+      <td data-label="Em estoque" class="num">{{.OnHand}}</td>
+      <td data-label="Retirar" class="num"><span class="take-wrap">
+        <input class="take" name="lines.{{$.Index}}.take.{{.ID}}" type="number" min="0" max="{{.OnHand}}" step="1" inputmode="numeric" value="{{.Take}}" aria-label="Retirar do lote {{.Lot}}"{{if .Blocked}} disabled{{end}}{{if .Error}} aria-invalid="true"{{end}}>
+        {{- if .Blocked}}<span class="hint">Só sai por Vencimento/Descarte</span>{{end}}
+        {{- with .Error}}<span class="field-error">{{icon "alert"}}{{.}}</span>{{end}}
+      </span></td>
+    </tr>
+  {{- end}}
+  </tbody>
+</table>
+<p class="sum" role="status" aria-live="polite"></p>
+{{- else}}
+<p class="fefo-empty">{{icon "box"}}Sem estoque deste medicamento.</p>
+{{- end}}
+{{- end}}
+{{end}}
