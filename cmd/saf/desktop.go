@@ -16,18 +16,31 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
+	goruntime "runtime"
+	"strconv"
+	"sync/atomic"
 	"time"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+
+	"saf/internal/update"
+	"saf/internal/web"
 )
 
 const desktopBuild = true
 
+// waitPIDVar names the SAF that restarted into this one: wait for it to close before opening.
+const waitPIDVar = "SAF_WAIT_PID"
+
 func desktop() error {
+	if pid, err := strconv.Atoi(os.Getenv(waitPIDVar)); err == nil {
+		waitForExit(pid, 30*time.Second)
+	}
 	exe, err := os.Executable()
 	if err != nil {
 		return err
@@ -44,8 +57,18 @@ func desktop() error {
 		return err
 	}
 	token := rand.Text()
-	// Only Host 127.0.0.1: a web page that points its own name at this PC gets nothing.
-	inventory, handler := app(store, box, keyText, filepath.Join(dir, dataDirName, "photos"), "127.0.0.1")
+	var window atomic.Pointer[context.Context] // Wails' context for the window, set once it starts
+	var restart atomic.Bool
+	updates := newUpdates(exe, func() {
+		restart.Store(true)
+		runtime.Quit(*window.Load())
+	})
+	inventory, handler := app(store, box, filepath.Join(dir, dataDirName, "photos"), web.Config{
+		KeyText: keyText,
+		Version: version,
+		Domain:  "127.0.0.1", // a web page that points its own name at this PC gets nothing
+		Updates: updates,
+	})
 	server := newServer(onlyThisWindow(token, handler))
 	go func() {
 		if err := server.Serve(listener); err != http.ErrServerClosed {
@@ -56,9 +79,8 @@ func desktop() error {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go purgeDaily(ctx, inventory)
+	go repeat(ctx, 24*time.Hour, "6-month purge", purge(inventory))
 
-	var window context.Context // Wails' context for the window, set once it starts
 	err = wails.Run(&options.App{
 		Title:            "SAF – Serviço de Apoio à Farmácia",
 		Width:            1280,
@@ -71,18 +93,46 @@ func desktop() error {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			fmt.Fprintf(w, `<!doctype html><meta http-equiv="refresh" content="0;url=%s"><title>SAF</title>`, start)
 		})},
-		OnStartup: func(c context.Context) { window = c },
+		OnStartup: func(c context.Context) {
+			window.Store(&c)
+			// Here, not earlier: only the SAF that keeps running gets here, so a second
+			// double-click never downloads or swaps SAF.exe.
+			if updates != nil {
+				go repeat(ctx, 24*time.Hour, "update check", updates.Check)
+			}
+		},
 		// A second double-click brings the open window forward instead of starting another SAF.
 		SingleInstanceLock: &options.SingleInstanceLock{
 			UniqueId: "br.edu.unilab.farmacia.saf",
 			OnSecondInstanceLaunch: func(options.SecondInstanceData) {
-				runtime.WindowUnminimise(window)
-				runtime.WindowShow(window)
+				runtime.WindowUnminimise(*window.Load())
+				runtime.WindowShow(*window.Load())
 			},
 		},
 	})
 	// The window is closed: let a save in progress finish before the database closes.
 	shutdownCtx, stop := context.WithTimeout(context.Background(), 10*time.Second)
 	defer stop()
-	return errors.Join(err, server.Shutdown(shutdownCtx))
+	err = errors.Join(err, server.Shutdown(shutdownCtx))
+	if restart.Load() {
+		cmd := exec.Command(exe) // the installed version, under the same name
+		cmd.Env = append(os.Environ(), waitPIDVar+"="+strconv.Itoa(os.Getpid()))
+		err = errors.Join(err, cmd.Start())
+	}
+	return err
+}
+
+// newUpdates returns the updater for a release build on Windows. Development builds ("dev") and
+// the Mac build don't update themselves.
+func newUpdates(exe string, restart func()) *update.Manager {
+	current, err := update.ParseVersion(version)
+	if err != nil || goruntime.GOOS != "windows" {
+		return nil
+	}
+	source, err := update.GitHub()
+	if err != nil {
+		slog.Error("updates off", "err", err)
+		return nil
+	}
+	return &update.Manager{Source: source, Current: current, Exe: exe, Restart: restart}
 }

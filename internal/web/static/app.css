@@ -318,6 +318,11 @@ dialog.photo-viewer { width: min(960px, calc(100% - 32px)); }
 .toast-action { min-height: 36px; padding: 0 12px; border: 1px solid rgb(255 255 255 / .5); border-radius: var(--radius-sm); background: none; color: #FFFFFF; font: inherit; font-weight: 700; cursor: pointer; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
+/* ---------- Update banner and version ---------- */
+.update-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 20px; background: var(--surface-2); border-bottom: 1px solid var(--border); }
+.update-bar span { display: flex; align-items: center; gap: 8px; }
+.menu-note { margin: 0; padding: 8px 14px 4px; border-top: 1px solid var(--border); font-size: .8125rem; color: var(--text-muted); }
+
 /* ---------- Login ---------- */
 .app.is-login .tabs, .app.is-login .header-right { display: none; }
 .login-wrap { display: grid; place-items: center; min-height: min(70vh, 640px); }

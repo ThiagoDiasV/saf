@@ -1,0 +1,38 @@
+name: release
+
+# A tag vX.Y.Z publishes SAF.exe as a GitHub release, with the latest.json the app's updater reads.
+# The job waits for approval in the "release" environment, which alone holds the signing key.
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    environment: release
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - run: make check
+      # Builds with third-party tools (go-winres, Trivy): this step never sees the signing key.
+      - name: Build and scan SAF.exe
+        run: make release-exe VERSION="${GITHUB_REF_NAME#v}"
+      # Only our own code (cmd/release, standard library) runs with the key.
+      - name: Sign latest.json
+        env:
+          SAF_SIGNING_KEY: ${{ secrets.SAF_SIGNING_KEY }}
+        run: go run ./cmd/release sign "${GITHUB_REF_NAME#v}" dist/release/SAF.exe dist/release
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes --title "SAF ${GITHUB_REF_NAME#v}"
+          dist/release/SAF.exe dist/release/latest.json dist/release/latest.json.sig

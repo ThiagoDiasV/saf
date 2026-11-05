@@ -19,6 +19,7 @@ import (
 	"saf/internal/auth"
 	"saf/internal/form"
 	"saf/internal/stock"
+	"saf/internal/update"
 )
 
 //go:embed templates
@@ -42,6 +43,11 @@ type Config struct {
 	// KeyText is the encryption key as saved in its file. The setup page shows it so the pharmacy
 	// prints it: without it, the names and photos in a backup can't be read.
 	KeyText string
+	// Version is SAF's version, shown in the user menu.
+	Version string
+	// Updates, in the desktop app on Windows, is what the update banner shows and does. Nil
+	// elsewhere: no banner.
+	Updates *update.Manager
 	// Now is the clock; nil means time.Now. Tests move it to expire sessions and rate limits.
 	Now func() time.Time
 }
@@ -51,6 +57,8 @@ type server struct {
 	inventory     *stock.Inventory
 	now           func() time.Time
 	keyText       string
+	version       string
+	updates       *update.Manager
 	pages         map[string]*template.Template
 	fragments     *template.Template // the partials alone, for HTML the browser fetches into a page
 	staticVersion string
@@ -87,6 +95,8 @@ type pageData struct {
 	MoreTabs []tab
 	Flash    *flash
 	Static   string
+	Version  string
+	Update   update.Status
 }
 
 type flash struct {
@@ -107,6 +117,8 @@ func Handler(cfg Config) http.Handler {
 		inventory:     cfg.Inventory,
 		now:           cfg.Now,
 		keyText:       cfg.KeyText,
+		version:       cfg.Version,
+		updates:       cfg.Updates,
 		staticVersion: contentHash(static),
 		local:         stock.TimeZone,
 	}
@@ -121,6 +133,8 @@ func Handler(cfg Config) http.Handler {
 	mux.HandleFunc("GET /login", s.loginPage)
 	mux.Handle("POST /login", newRateLimiter(10, time.Minute, s.now).wrap(http.HandlerFunc(s.login)))
 	mux.Handle("POST /sair", s.requireUser(s.logout))
+	mux.Handle("POST /atualizar", s.requireAdmin(s.acceptUpdate))
+	mux.Handle("POST /reiniciar", s.requireUser(s.restartForUpdate))
 	mux.Handle("GET "+setupPath, s.requireUser(s.setupPage))
 	mux.Handle("POST "+setupPath, s.requireUser(s.completeSetup))
 	mux.Handle("GET /minha-senha", s.requireUser(s.ownPasswordPage))
@@ -225,7 +239,11 @@ func (s *server) renderFragment(w http.ResponseWriter, name string, data any) {
 func (s *server) render(w http.ResponseWriter, r *http.Request, status int, page string, data pageData) {
 	if data.User.ID != 0 {
 		data.Tabs, data.MoreTabs = tabsFor(data.User)
+		if s.updates != nil {
+			data.Update = s.updates.Status()
+		}
 	}
+	data.Version = s.version
 	if data.Flash == nil {
 		data.Flash = takeFlash(w, r)
 	}

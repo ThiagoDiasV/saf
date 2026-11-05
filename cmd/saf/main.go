@@ -29,6 +29,9 @@ import (
 	"saf/internal/web"
 )
 
+// version is set by release builds (-ldflags "-X main.version=1.4.2"); "dev" never updates itself.
+var version = "dev"
+
 const usage = `uso:
   saf serve
   saf create-admin <login> "<nome completo>"
@@ -91,7 +94,7 @@ func serve() error {
 		return err
 	}
 
-	inventory, handler := app(store, box, keyText, filepath.Join(dataDir(), "photos"), "")
+	inventory, handler := app(store, box, filepath.Join(dataDir(), "photos"), web.Config{KeyText: keyText, Version: version})
 	listener, err := net.Listen("tcp", "127.0.0.1:8080")
 	if err != nil {
 		return err
@@ -109,16 +112,13 @@ func firstRun(store *sql.DB) error {
 	return err
 }
 
-// app wires SAF together on an open database. keyText is the key as saved in its file (the setup
-// page shows it to be printed); domain is the only Host accepted, or "" for any.
-func app(store *sql.DB, box *seal.Box, keyText, photoDir, domain string) (*stock.Inventory, http.Handler) {
+// app wires SAF together on an open database; cfg brings what differs between the desktop app
+// and development (key text, version, Host, updates).
+func app(store *sql.DB, box *seal.Box, photoDir string, cfg web.Config) (*stock.Inventory, http.Handler) {
 	inventory := stock.NewInventory(store, box, photoDir)
-	return inventory, web.Handler(web.Config{
-		Accounts:  auth.NewAccounts(store, auth.HashCost),
-		Inventory: inventory,
-		Domain:    domain,
-		KeyText:   keyText,
-	})
+	cfg.Accounts = auth.NewAccounts(store, auth.HashCost)
+	cfg.Inventory = inventory
+	return inventory, web.Handler(cfg)
 }
 
 func newServer(handler http.Handler) *http.Server {
@@ -140,7 +140,7 @@ func run(inventory *stock.Inventory, server *http.Server, listener net.Listener)
 	serveErr := make(chan error, 1)
 	go func() { serveErr <- server.Serve(listener) }()
 	slog.Info("SAF listening", "url", "http://"+listener.Addr().String())
-	go purgeDaily(ctx, inventory)
+	go repeat(ctx, 24*time.Hour, "6-month purge", purge(inventory))
 
 	select {
 	case err := <-serveErr:
@@ -154,23 +154,33 @@ func run(inventory *stock.Inventory, server *http.Server, listener net.Listener)
 	return err
 }
 
-// purgeDaily deletes photos and first names past six months (LGPD), at startup and then every
-// 24 hours, until ctx ends. A failed run is logged and retried the next day.
-func purgeDaily(ctx context.Context, inventory *stock.Inventory) {
-	ticker := time.NewTicker(24 * time.Hour)
+// repeat runs task now and then every interval, until ctx ends. A failed run is logged and tried
+// again at the next one.
+//
+//	go repeat(ctx, 24*time.Hour, "6-month purge", purge(inventory))
+func repeat(ctx context.Context, interval time.Duration, name string, task func(context.Context) error) {
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
-		result, err := inventory.Purge(ctx, time.Now())
-		if err != nil {
-			slog.Error("6-month purge failed", "err", err)
-		} else {
-			slog.Info("6-month purge", "photos", result.Photos, "names", result.Names, "files", result.Files)
+		if err := task(ctx); err != nil {
+			slog.Error(name+" failed", "err", err)
 		}
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
 		}
+	}
+}
+
+// purge deletes photos and first names past six months (LGPD).
+func purge(inventory *stock.Inventory) func(context.Context) error {
+	return func(ctx context.Context) error {
+		result, err := inventory.Purge(ctx, time.Now())
+		if err == nil {
+			slog.Info("6-month purge", "photos", result.Photos, "names", result.Names, "files", result.Files)
+		}
+		return err
 	}
 }
 

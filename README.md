@@ -53,6 +53,32 @@ Inside, SAF answers its window on a random port of `127.0.0.1` with a token made
 other programs on the PC can't use it. `SAF.exe` is not signed: Windows SmartScreen warns once
 ("Mais informações" → "Executar assim mesmo"), and a locked-down PC may refuse it.
 
+## Releases and updates
+
+A tag `vX.Y.Z` runs `.github/workflows/release.yml`. After you approve it in the `release`
+environment, the job runs `make check`, builds and scans `SAF.exe`, signs `latest.json` with the
+`SAF_SIGNING_KEY` secret, and publishes the GitHub release.
+
+```sh
+git tag v1.4.2 && git push origin v1.4.2
+```
+
+`SAF.exe` (a release build, never a `dev` one) checks
+`https://github.com/ThiagoDiasV/saf/releases/latest/download/latest.json` when it opens and then
+daily. It trusts it only if the signature matches `update.ReleaseKey`:
+
+- **minor or patch** (1.4.2 → 1.5.0): downloads, checks the SHA-256, and swaps `SAF.exe` (the old
+  one becomes `SAF.anterior.exe`). It runs from the next start; a banner offers "Reiniciar agora".
+- **major** (1.x → 2.0.0): a banner for administrators, "Atualizar agora". Nothing changes before
+  the click. Use a major version when an update needs people to know about it.
+
+Never an older version. To roll back by hand: close SAF and rename `SAF.anterior.exe` to `SAF.exe`.
+A database migration is forward-only; its copy is in `dados/backups/pre-migration-NNN.db`.
+
+The signing key: `go run ./cmd/release keygen <file>` writes a new one and prints its public half,
+which goes in `update.ReleaseKey`. A new key means SAF.exe must be installed by hand once more,
+because the running version only trusts the old one.
+
 ## Check it
 
 | Command | What it does |
@@ -90,6 +116,8 @@ saf keygen                         a new encryption key
 
 ```
 cmd/saf/          the commands above; desktop.go is the window, desktop_common.go its folder and guard
+cmd/release/      signs releases (CI) and makes the signing key
+internal/update/  the updater: signed latest.json, SAF.exe swap, the banner's state
 build/            the app icon, the Windows build script, the Mac bundle's Info.plist
 internal/db/      SQLite: connection settings, numbered migrations, snapshot before migrating
 internal/auth/    users, passwords, login lock, sessions

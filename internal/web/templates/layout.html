@@ -31,6 +31,7 @@
         <div class="menu" id="user-menu" hidden>
           <a href="/minha-senha">{{icon "key"}}Alterar minha senha</a>
           <form method="post" action="/sair"><button type="submit">{{icon "logout"}}Sair</button></form>
+          {{- with .Version}}<p class="menu-note">SAF {{.}}</p>{{end}}
         </div>
       </div>
     </div>
@@ -55,6 +56,18 @@
       {{- end}}
     </ul>
   </nav>
+  {{- end}}
+
+  {{- if and .Update.Waiting .User.IsAdmin}}
+  <div class="update-bar" role="status">
+    <span>{{icon "download"}}A versão {{.Update.Waiting}} do SAF está disponível. Ela traz mudanças maiores: atualize quando o SAF puder fechar por um minuto.</span>
+    <form method="post" action="/atualizar"><button class="btn btn-primary" type="submit">Atualizar agora</button></form>
+  </div>
+  {{- else if .Update.Installed}}
+  <div class="update-bar" role="status">
+    <span>{{icon "check"}}A versão {{.Update.Installed}} do SAF já foi instalada e passa a valer quando o SAF abrir de novo.</span>
+    <form method="post" action="/reiniciar"><button class="btn" type="submit">Reiniciar agora</button></form>
+  </div>
   {{- end}}
 
   <main id="conteudo" tabindex="-1">
